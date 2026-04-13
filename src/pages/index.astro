@@ -1,21 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import GameGrid from '../components/GameGrid';
 import { getIndexData } from '../controllers/index.controller';
 
-const { games, total, filters } = await getIndexData(Astro.url);
+const { games, total } = await getIndexData(Astro.url);
 ---
 
 <Layout>
-    <main>
-        <p>{total} jeux</p>
-
-        <ul>
-            {games.map((game) => (
-                <li>
-                    <a href={`/game/${game.id}`}>{game.main_title}</a>
-                    <span>{game.release_year}</span>
-                </li>
-            ))}
-        </ul>
-    </main>
+    <GameGrid client:load initialGames={games} initialTotal={total} />
 </Layout>
