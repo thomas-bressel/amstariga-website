@@ -8,10 +8,8 @@ export interface GameFilters {
 /** A single game as returned by GET /api/games. */
 export interface GameListItem {
     id: number;
-    title: string;
-    platform: string;
-    year: number;
-    cover_url: string;
+    main_title: string;
+    release_year: number;
 }
 
 /** Full game detail as returned by GET /api/games/:id. */

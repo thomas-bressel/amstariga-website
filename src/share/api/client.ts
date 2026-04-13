@@ -9,6 +9,7 @@ const API_BASE = 'http://localhost:8090';
  */
 export async function apiFetch<T>(path: string): Promise<T> {
     const res = await fetch(API_BASE + path);
+    console.log('[API FETCH] [MODEL] - ', path, '-', res.status);
     if (!res.ok) throw new Error(`API ${res.status} — ${path}`);
     return res.json();
 }
