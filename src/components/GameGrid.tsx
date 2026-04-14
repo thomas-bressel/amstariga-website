@@ -133,7 +133,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     return (
         <div>
             {/* ── Chip bar ── */}
-            <div className="filter-chip-bar">
+            <div className="filter-chip-bar is-visible no-transition">
                 <button
                     className={`fchip fchip-all ${activeCount === 0 ? 'fchip-active' : ''}`}
                     onClick={resetFilters}
@@ -151,6 +151,22 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                 ))}
             </div>
 
+            {/* ── Active filters strip ── */}
+            {activeCount > 0 && (
+                <div className="active-filters-strip has-tags">
+                    {filters.categories?.map(cat => (
+                        <span key={cat} className="atag" onClick={() => toggleCategory(cat)}>
+                            {cat} <span className="atag-x">&times;</span>
+                        </span>
+                    ))}
+                    {filters.years?.map(y => (
+                        <span key={y} className="atag" onClick={() => toggleYear(y)}>
+                            {y} <span className="atag-x">&times;</span>
+                        </span>
+                    ))}
+                </div>
+            )}
+
             {/* ── Stats + FAB ── */}
             <div className="stats-bar">
                 <span><span>{total}</span> jeux</span>
@@ -160,6 +176,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                 className={`filter-fab ${activeCount > 0 ? 'has-active' : ''}`}
                 onClick={() => setSheetOpen(true)}
                 aria-label="Ouvrir les filtres avancés"
+                style={{ zIndex: 900 }}
             >
                 <span className="fab-ico">⚙</span>
                 <span className="fab-lbl">FILTRES</span>
@@ -188,7 +205,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
             {sheetOpen && (
                 <>
                     <div className="filter-overlay open" onClick={() => setSheetOpen(false)} />
-                    <div className="filter-sheet open" role="dialog" aria-modal aria-label="Filtres avancés">
+                    <div className="filter-sheet open is-visible no-transition" role="dialog" aria-modal aria-label="Filtres avancés">
                         <div className="sheet-handle" onClick={() => setSheetOpen(false)}>
                             <div className="handle-bar" />
                         </div>

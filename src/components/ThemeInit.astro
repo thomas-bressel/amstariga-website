@@ -1,0 +1,8 @@
+---
+---
+<script is:inline>
+    (function () {
+        var savedTheme = localStorage.getItem('retro_theme') || 'atari';
+        document.body.classList.add('theme-' + savedTheme);
+    })();
+</script>

@@ -7,5 +7,7 @@ const { games, total } = await getIndexData(Astro.url);
 ---
 
 <Layout>
-    <GameGrid client:load initialGames={games} initialTotal={total} />
+    <div class="main-layout">
+        <GameGrid client:load initialGames={games} initialTotal={total} />
+    </div>
 </Layout>
