@@ -4,8 +4,9 @@ const API_BASE = 'http://localhost:8090';
 /**
  * Performs a GET request to the Go API and returns the parsed JSON.
  *
- * @param path - The path with the query string already built.
- * @throws Error if the HTTP response is not ok (4xx, 5xx)
+ * @param path    - The path with the query string already built (e.g. `/api/games?limit=50`).
+ * @returns         Parsed JSON body cast to `T`.
+ * @throws {Error}  If the HTTP response status is not 2xx.
  */
 export async function apiFetch<T>(path: string): Promise<T> {
     const res = await fetch(API_BASE + path);

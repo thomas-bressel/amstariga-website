@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import GameGrid from '../components/GameGrid';
+import GameGrid from '../components/grid/GameGrid';
 import { getIndexData } from '../controllers/index.controller';
 
 const { games, total } = await getIndexData(Astro.url);

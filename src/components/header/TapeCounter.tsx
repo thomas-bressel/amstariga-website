@@ -1,16 +1,28 @@
 import { useEffect, useState } from 'react';
 
+/** Props for {@link TapeCounter}. */
 interface Props {
+    /** Initial game count to display (updated at runtime via `retro:count-update`). */
     value: number;
 }
 
-/** Splits a number into exactly 5 digits, zero-padded. */
+/**
+ * Splits a non-negative integer into exactly 5 digits, zero-padded on the left.
+ * Values above 99 999 are clamped to 99 999.
+ *
+ * @param n - The number to split.
+ * @returns   Array of 5 single digits, most-significant first.
+ */
 function toDigits(n: number): number[] {
     const s = String(Math.min(n, 99999)).padStart(5, '0');
     return s.split('').map(Number);
 }
 
-/** Single reel — animates vertically when digit changes. */
+/**
+ * Single mechanical reel that animates vertically when its digit changes.
+ *
+ * @param digit - The digit (0–9) this reel should currently display.
+ */
 function Reel({ digit }: { digit: number }) {
     const [current, setCurrent]   = useState(digit);
     const [previous, setPrevious] = useState(digit);
@@ -40,6 +52,14 @@ function Reel({ digit }: { digit: number }) {
     );
 }
 
+/**
+ * Five-digit mechanical tape counter inspired by Amstrad cassette decks.
+ *
+ * Listens to the `retro:count-update` custom event dispatched by {@link GameGrid}
+ * and animates each reel independently when the corresponding digit changes.
+ *
+ * @param initialValue - Game count pre-rendered by SSR; updated at runtime via event.
+ */
 export default function TapeCounter({ value: initialValue }: Props) {
     const [value, setValue] = useState(initialValue);
 

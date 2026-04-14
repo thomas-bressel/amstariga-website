@@ -1,14 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { GameListItem } from '../share/types/game';
+import type { GameListItem } from '../../share/types/game';
+import './Carousel.css';
 
+/** Radius of the 3-D wheel in pixels — controls how far apart items appear. */
 const RADIUS = 480;
+
+/** Angular step in degrees between adjacent carousel slots. */
 const STEP   = 30;
+
+/**
+ * Slot offsets relative to the active item.
+ * Negative = left, positive = right, 0 = centre.
+ */
 const SLOTS  = [-3, -2, -1, 0, 1, 2, 3];
 
+/** Props for {@link Carousel}. */
 interface Props {
+    /** Full list of games to cycle through. */
     games: GameListItem[];
 }
 
+/**
+ * CSS 3-D rotating carousel for the game cover view.
+ *
+ * Navigation:
+ * - Mouse wheel (passive: false so `preventDefault` works)
+ * - Touch swipe (threshold 40 px)
+ * - Prev/next buttons
+ *
+ * Visibility is controlled by `retro:carousel-show` (first visit, fired by the
+ * CRT boot sequence) or by reading `amstariga_visited` from localStorage
+ * (returning visitors — shown immediately, no animation).
+ *
+ * @param games - Array of games to display; renders nothing if empty.
+ */
 export default function Carousel({ games }: Props) {
     const [index, setIndex]         = useState(0);
     const [angle, setAngle]         = useState(0);
@@ -18,6 +43,14 @@ export default function Carousel({ games }: Props) {
     const touchStartX               = useRef(0);
     const total                     = games.length;
 
+    /**
+     * Rotates the carousel by one slot in the given direction.
+     *
+     * Uses a CSS transition on the wheel element then resets the transform to 0°
+     * once the animation ends, so the angle never accumulates.
+     *
+     * @param direction - `1` to advance (next), `-1` to go back (prev).
+     */
     const move = useCallback((direction: number) => {
         if (animating || !total) return;
         setAnimating(true);

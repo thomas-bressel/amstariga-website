@@ -1,9 +1,13 @@
 import { fetchGames, fetchGamesCount } from '../share/models/games';
 import type { GameFilters, GameListItem } from '../share/types/game';
 
+/** Data shape returned by the index page controller and forwarded to the React island. */
 export interface IndexPageData {
+    /** First page of games (up to 50) matching the active filters. */
     games: GameListItem[];
+    /** Total number of games matching the active filters. */
     total: number;
+    /** Filters derived from the current URL search params. */
     filters: GameFilters;
 }
 

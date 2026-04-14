@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchGames, fetchGamesCount } from '../share/models/games';
-import type { GameFilters, GameListItem } from '../share/types/game';
-import Carousel from './Carousel';
+import { fetchGames, fetchGamesCount } from '../../share/models/games';
+import type { GameFilters, GameListItem } from '../../share/types/game';
+import Carousel from '../carousel/Carousel';
+import './GameGrid.css';
 
+/** Number of games fetched per infinite-scroll batch. */
 const BATCH_SIZE = 50;
 
+/** Emoji icon for each game category, keyed by category name. */
 const CAT_ICONS: Record<string, string> = {
     'Action':       '⚔️',
     'Aventure':     '🗺️',
@@ -19,6 +22,7 @@ const CAT_ICONS: Record<string, string> = {
     'default':      '🎮',
 };
 
+/** Release years available in the year filter (1982–1999). */
 const YEARS: number[] = [];
 for (let y = 1982; y <= 1999; y++) YEARS.push(y);
 
@@ -26,6 +30,7 @@ for (let y = 1982; y <= 1999; y++) YEARS.push(y);
 // Props
 // ---------------------------------------------------------------------------
 
+/** Props for {@link GameGrid}. */
 interface Props {
     /** Initial games loaded by SSR (first 50). */
     initialGames: GameListItem[];
@@ -37,6 +42,22 @@ interface Props {
 // Component
 // ---------------------------------------------------------------------------
 
+/**
+ * Main interactive game list with infinite scroll, category/year filters,
+ * and a toggle between the 3-D carousel view and the flat grid view.
+ *
+ * State management:
+ * - `games` / `offset` — accumulate batches as the user scrolls
+ * - `filters` — shared by the chip bar, the active-filters strip, and the bottom sheet
+ * - `view` — `'cover'` (carousel, default) or `'grid'`
+ *
+ * Cross-component communication (custom events on `window`):
+ * - Dispatches `retro:count-update` when `total` changes → updates {@link TapeCounter}
+ * - Listens to `retro:view-change` → switches between carousel and grid
+ *
+ * @param initialGames - First batch of games pre-rendered by SSR.
+ * @param initialTotal - Total matching game count pre-rendered by SSR.
+ */
 export default function GameGrid({ initialGames, initialTotal }: Props) {
     const [games, setGames]         = useState<GameListItem[]>(initialGames);
     const [total, setTotal]         = useState(initialTotal);
@@ -74,10 +95,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
         }
     }, []);
 
-    // ------------------------------------------------------------------
-    // Scroll infini — IntersectionObserver sur le sentinel en bas de page
-    // ------------------------------------------------------------------
-
+    // IntersectionObserver on the sentinel element at the bottom of the list
     useEffect(() => {
         const sentinel = sentinelRef.current;
         if (!sentinel) return;
@@ -90,6 +108,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
         return () => observer.disconnect();
     }, []);
 
+    // Listen to view-change events dispatched by the header view-toggle buttons
     useEffect(() => {
         const handler = (e: Event) => {
             const v = (e as CustomEvent<{ view: 'grid' | 'cover' }>).detail.view;
@@ -99,6 +118,10 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
         return () => window.removeEventListener('retro:view-change', handler);
     }, []);
 
+    /**
+     * Fetches the next batch of games and appends them to the list.
+     * No-ops when a request is already in flight or there are no more results.
+     */
     async function loadMore() {
         if (isLoading || !hasMore) return;
         setIsLoading(true);
@@ -116,10 +139,12 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
         }
     }
 
-    // ------------------------------------------------------------------
-    // Changement de filtres — remet à zéro la liste
-    // ------------------------------------------------------------------
-
+    /**
+     * Replaces the current game list with a fresh fetch using the given filters.
+     * Resets offset and `hasMore` so infinite scroll restarts from the beginning.
+     *
+     * @param next - The new filter state to apply.
+     */
     async function applyFilters(next: GameFilters) {
         setFilters(next);
         setIsLoading(true);
@@ -138,22 +163,34 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
         }
     }
 
+    /**
+     * Toggles a category in the active filters.
+     *
+     * @param cat - Category name to add or remove.
+     */
     function toggleCategory(cat: string) {
         const cats = filters.categories ?? [];
         const next = cats.includes(cat) ? cats.filter(c => c !== cat) : [...cats, cat];
         applyFilters({ ...filters, categories: next });
     }
 
+    /**
+     * Toggles a release year in the active filters.
+     *
+     * @param year - Year to add or remove.
+     */
     function toggleYear(year: number) {
         const years = filters.years ?? [];
         const next  = years.includes(year) ? years.filter(y => y !== year) : [...years, year];
         applyFilters({ ...filters, years: next });
     }
 
+    /** Clears all active filters and reloads the full game list. */
     function resetFilters() {
         applyFilters({ categories: [], years: [] });
     }
 
+    /** Total number of active filter criteria (used for the badge counter). */
     const activeCount = (filters.categories?.length ?? 0) + (filters.years?.length ?? 0);
 
     // ------------------------------------------------------------------

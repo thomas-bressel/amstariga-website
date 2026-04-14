@@ -1,17 +1,8 @@
-/**
- * @file header.css
- * @description Brutal header — game.html
- *
- * Design : brutaliste, assemblage animé à l'entrée, glitch sur le logo.
- * Chaque bloc arrive depuis une direction différente (translateX/Y → 0).
- * Le glitch se déclenche en idle toutes les 6s.
- *
- * @see style.css — Variables CSS des thèmes (--accent, --accent2, etc.)
- */
-
 /* ============================================================
-   CONTENEUR
+   PAGE DÉTAIL — header brutaliste + contenu jeu
    ============================================================ */
+
+/* ── HEADER BRUTALISTE ── */
 .brutal-header {
     position: relative;
     display: grid;
@@ -26,9 +17,6 @@
     z-index: 100;
 }
 
-/* ============================================================
-   LIGNES DE GRILLE DÉCORATIVES
-   ============================================================ */
 .bh-grid-line {
     position: absolute;
     background: var(--accent);
@@ -39,9 +27,6 @@
 .bh-grid-line--h2 { top: 70%; left: 0; width: 100%; height: 1px; }
 .bh-grid-line--v1 { top: 0; left: 38%; width: 1px; height: 100%; }
 
-/* ============================================================
-   LOGO BLOCK — arrive depuis la gauche
-   ============================================================ */
 .bh-logo-block {
     position: relative;
     display: flex;
@@ -80,7 +65,6 @@
     letter-spacing: 2px;
 }
 
-/* Glitch layer — superposé, se déclenche en idle */
 .bh-logo-glitch {
     position: absolute;
     top: 0; left: 0;
@@ -105,9 +89,6 @@
     100%     { opacity: 0; }
 }
 
-/* ============================================================
-   NUMÉRO DE SÉRIE — arrive depuis le haut
-   ============================================================ */
 .bh-serial {
     display: flex;
     flex-direction: column;
@@ -138,9 +119,6 @@
     font-weight: 700;
 }
 
-/* ============================================================
-   LIEN RETOUR — arrive depuis la droite
-   ============================================================ */
 .bh-back {
     position: relative;
     display: flex;
@@ -182,7 +160,6 @@
     text-transform: uppercase;
 }
 
-/* Ligne déco sous le bouton */
 .bh-back-line {
     position: absolute;
     bottom: -2px;
@@ -195,3 +172,40 @@
 .bh-back:hover .bh-back-line {
     width: 100%;
 }
+
+/* ── CONTENU DÉTAIL ── */
+.detail-page .detail-main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0;
+}
+.back-link { color: var(--green); text-decoration: none; font-family: monospace; font-weight: bold; }
+.back-link:hover { text-decoration: underline; }
+.detail-card {
+    background: var(--surface);
+    border: 1px solid var(--border-hi);
+    border-top: 2px solid var(--green);
+    padding: 2rem;
+}
+.detail-title { font-size: 2rem; color: var(--text); margin-bottom: 0.5rem; letter-spacing: 2px; text-transform: uppercase; }
+.detail-alt-title { font-size: 1rem; color: var(--text-dim); margin-bottom: 1rem; font-style: italic; }
+.detail-year-pub { margin-bottom: 1rem; font-size: 0.8rem; color: var(--text-dim); }
+.detail-booleans { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; padding: 1rem 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.detail-section { margin: 1.5rem 0; }
+.detail-section h3 { color: var(--green); margin-bottom: 0.75rem; font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; }
+.detail-section p, .detail-section li { line-height: 1.6; color: var(--text); }
+.detail-section ul { padding-left: 1.5rem; }
+.solution-step { margin-bottom: 1rem; }
+.solution-step strong { color: var(--green); }
+
+.bool-btn-group { display: flex; gap: 2px; }
+.bool-btn {
+    width: 24px; height: 20px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text-dim); font-size: 0.7rem; cursor: pointer;
+    font-family: monospace; transition: all 0.12s;
+    display: flex; align-items: center; justify-content: center;
+}
+.bool-btn:hover { border-color: var(--green); color: var(--green); }
+.bool-btn.active[data-state="yes"] { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+.bool-btn.active[data-state="no"]  { border-color: var(--red); color: var(--red); }

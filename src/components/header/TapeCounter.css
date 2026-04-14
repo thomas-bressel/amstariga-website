@@ -1,0 +1,109 @@
+/* ============================================================
+   TAPE COUNTER — compteur de cassette Amstrad
+   ============================================================ */
+.tape-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: #111;
+    border: 2px solid #333;
+    border-radius: 4px;
+    padding: 4px 8px 4px 6px;
+    box-shadow:
+        inset 0 2px 4px rgba(0,0,0,0.8),
+        0 1px 0 rgba(255,255,255,0.05),
+        0 2px 8px rgba(0,0,0,0.6);
+}
+
+.tc-reel {
+    position: relative;
+    width: 22px;
+    height: 32px;
+    overflow: hidden;
+    background: #0a0a0a;
+    border: 1px solid #222;
+    border-radius: 2px;
+    box-shadow:
+        inset 0 0 6px rgba(0,0,0,0.9),
+        inset 0 1px 2px rgba(0,0,0,0.8);
+}
+
+.tc-strip {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.tc-strip--roll {
+    animation: reel-roll 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes reel-roll {
+    0%   { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+}
+
+.tc-digit {
+    width: 100%;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #e8e8e8;
+    text-shadow: 0 0 4px rgba(255,255,255,0.3);
+    background: linear-gradient(
+        to bottom,
+        #1a1a1a 0%,
+        #2a2a2a 30%,
+        #222 50%,
+        #1a1a1a 70%,
+        #111 100%
+    );
+    border-bottom: 1px solid #333;
+    user-select: none;
+}
+
+/* Ombres haut/bas pour effet de profondeur */
+.tc-reel-shadow {
+    position: absolute;
+    left: 0; width: 100%;
+    height: 8px;
+    pointer-events: none;
+    z-index: 2;
+}
+.tc-reel-shadow--top {
+    top: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+}
+.tc-reel-shadow--bot {
+    bottom: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+}
+
+/* Ligne centrale — trait de lecture */
+.tc-reel::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 0;
+    width: 100%; height: 1px;
+    background: rgba(255,255,255,0.06);
+    transform: translateY(-50%);
+    z-index: 3;
+    pointer-events: none;
+}
+
+.tc-label {
+    font-family: monospace;
+    font-size: 0.55rem;
+    color: #555;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-left: 4px;
+    align-self: flex-end;
+    padding-bottom: 4px;
+}

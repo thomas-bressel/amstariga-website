@@ -1,4 +1,22 @@
 ---
+/**
+ * Background3D.astro
+ *
+ * Full-screen Three.js scene rendered behind all page content (z-index -1).
+ * Loads an EXR equirectangular panorama as a sky sphere and adds a bloom
+ * post-processing pass for the characteristic phosphor-glow look.
+ *
+ * The camera rotates slowly on the Y axis (auto-rotation) and follows
+ * the mouse horizontally with a 0.05 lerp factor for a parallax feel.
+ *
+ * Dependencies (loaded via importmap, no npm install required):
+ *   - three          — core WebGL renderer and scene graph
+ *   - EXRLoader      — parses the .exr HDR panorama
+ *   - EffectComposer — multi-pass post-processing pipeline
+ *   - UnrealBloomPass— bloom glow effect
+ *
+ * Asset: /public/amstrad_world.exr — HDR panorama of the Amstrad retro scene.
+ */
 ---
 <script type="importmap">
 {
@@ -19,37 +37,48 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
 RectAreaLightUniformsLib.init();
 
-const scene    = new THREE.Scene();
-const camera   = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+/* ── Scene & Camera ── */
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(10, 10, -100);
 
+/* ── Renderer ── */
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.toneMapping         = THREE.ReinhardToneMapping;
 renderer.toneMappingExposure = 1.5;
 
+/* Fixed behind all page content */
 renderer.domElement.style.position = 'fixed';
 renderer.domElement.style.inset    = '0';
 renderer.domElement.style.zIndex   = '-1';
 document.body.appendChild(renderer.domElement);
 
+/* ── Post-processing: bloom pass ── */
 const renderScene = new RenderPass(scene, camera);
-const bloomPass   = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 0.4, 0.85);
-const composer    = new EffectComposer(renderer);
+const bloomPass   = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    1.2,  /* strength  */
+    0.4,  /* radius    */
+    0.85  /* threshold */
+);
+const composer = new EffectComposer(renderer);
 composer.addPass(renderScene);
 composer.addPass(bloomPass);
 
+/* ── Sky sphere ── */
 new EXRLoader().load('/amstrad_world.exr', (texture) => {
     texture.mapping   = THREE.EquirectangularReflectionMapping;
-    texture.magFilter = THREE.NearestFilter;
-    const skyGeo  = new THREE.SphereGeometry(500, 60, 40);
-    skyGeo.scale(-1, 1, 1);
+    texture.magFilter = THREE.NearestFilter;  /* keep the pixel-art look */
+    const skyGeo    = new THREE.SphereGeometry(500, 60, 40);
+    skyGeo.scale(-1, 1, 1);  /* invert normals so the texture faces inward */
     const skySphere = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ map: texture }));
     scene.add(skySphere);
     scene.environment = texture;
 });
 
+/* ── Mouse parallax ── */
 let mouseX = 0, targetX = 0;
 const clock = new THREE.Clock();
 
@@ -57,18 +86,23 @@ window.addEventListener('mousemove', (e) => {
     mouseX = (e.clientX / window.innerWidth) - 0.5;
 });
 
+/* ── Render loop ── */
 function animate() {
     requestAnimationFrame(animate);
     const time = clock.getElapsedTime();
+
+    /* Lerp towards mouse position + slow sine auto-rotation */
     targetX += (mouseX - targetX) * 0.05;
     const autoX = Math.sin(time * 0.2) * 0.1;
     camera.rotation.y = autoX - (targetX * 0.8);
-    camera.rotation.x = -0.4;
+    camera.rotation.x = -0.4;  /* slight downward tilt */
     camera.updateProjectionMatrix();
+
     composer.render();
 }
 animate();
 
+/* ── Resize handler ── */
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();

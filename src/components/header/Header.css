@@ -1,0 +1,352 @@
+/* ============================================================
+   HEADER — VERRE BRISÉ ANIMÉ
+   3 fragments qui arrivent de directions différentes
+   avec rebond élastique, puis fissures lumineuses aux jointures
+   ============================================================ */
+
+.main-header {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+    z-index: 1000;
+    pointer-events: none;
+    height: 100px;
+}
+
+/* Conteneur legacy neutralisé */
+.header-glass-container {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: none;
+    backdrop-filter: none;
+    border: none;
+    display: block;
+}
+.header-glass-container::before,
+.header-glass-container::after { display: none; }
+
+/* ── FRAGMENTS ── */
+.hf {
+    position: absolute;
+    backdrop-filter: blur(14px);
+    pointer-events: auto;
+}
+
+/* Fragment 1 — logo, gauche, arrive du haut */
+.hf--logo {
+    top: 0; left: 0;
+    width: 55%;
+    height: 90px;
+    background: rgba(30, 26, 22, 0.92);
+    clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%);
+    display: flex;
+    align-items: center;
+    padding-left: 1.8rem;
+    opacity: 0;
+    transform: translateY(-120px) skewX(-8deg);
+    z-index: 3;
+}
+
+/* Fragment 2 — bande centrale décorative, arrive de la droite */
+.hf--mid {
+    top: 0;
+    left: 48%;
+    width: 28%;
+    height: 72px;
+    background: rgba(20, 18, 16, 0.65);
+    clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
+    opacity: 0;
+    transform: translateX(120vw) skewX(6deg);
+    pointer-events: none;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Fragment 3 — actions, droite, arrive du haut */
+.hf--actions {
+    top: 0; right: 0;
+    width: 32%;
+    height: 80px;
+    background: rgba(26, 22, 20, 0.88);
+    clip-path: polygon(6% 0, 100% 0, 100% 100%, 0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 1.5rem;
+    opacity: 0;
+    transform: translateY(-120px) skewX(12deg) rotate(2deg);
+    z-index: 2;
+}
+
+/* ── ANIMATIONS D'APPARITION ── */
+.hf--logo.is-visible    { animation: frag-top-left  0.9s  cubic-bezier(0.22,1,0.36,1) both; }
+.hf--mid.is-visible     { animation: frag-right     1.0s  cubic-bezier(0.22,1,0.36,1) both; }
+.hf--actions.is-visible { animation: frag-top-right 0.85s cubic-bezier(0.22,1,0.36,1) both; }
+.hf-crack.is-visible    { animation: crack-appear   1.0s  ease both; }
+.filter-chip-bar.is-visible { animation: chipbar-in 0.6s  cubic-bezier(0.22,1,0.36,1) both; }
+
+@keyframes frag-top-left {
+    0%   { transform: translateY(-120px) skewX(-8deg); opacity: 0; }
+    60%  { transform: translateY(12px) skewX(-8deg);   opacity: 1; }
+    75%  { transform: translateY(-6px) skewX(-8deg); }
+    88%  { transform: translateY(4px) skewX(-8deg); }
+    100% { transform: translateY(0) skewX(-8deg);      opacity: 1; }
+}
+
+@keyframes frag-right {
+    0%   { transform: translateX(120vw) skewX(6deg); opacity: 0; }
+    60%  { transform: translateX(-18px) skewX(6deg); opacity: 1; }
+    75%  { transform: translateX(8px) skewX(6deg); }
+    88%  { transform: translateX(-4px) skewX(6deg); }
+    100% { transform: translateX(0) skewX(6deg);     opacity: 1; }
+}
+
+@keyframes frag-top-right {
+    0%   { transform: translateY(-120px) skewX(12deg) rotate(2deg); opacity: 0; }
+    60%  { transform: translateY(14px) skewX(12deg) rotate(2deg);   opacity: 1; }
+    75%  { transform: translateY(-7px) skewX(12deg) rotate(2deg); }
+    88%  { transform: translateY(3px) skewX(12deg) rotate(2deg); }
+    100% { transform: translateY(0) skewX(12deg) rotate(2deg);      opacity: 1; }
+}
+
+/* ── FISSURES — traits lumineux aux jointures ── */
+.hf-crack {
+    position: absolute;
+    top: 0;
+    height: 100px;
+    width: 2px;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.hf-crack--1 {
+    left: calc(55% - 12%);
+    background: linear-gradient(180deg,
+        transparent 0%,
+        rgba(158,212,178,0.9) 20%,
+        rgba(255,255,255,0.6) 50%,
+        rgba(158,212,178,0.4) 80%,
+        transparent 100%
+    );
+    transform: rotate(3deg);
+    filter: blur(0.5px);
+}
+
+.hf-crack--2 {
+    left: calc(76%);
+    background: linear-gradient(180deg,
+        transparent 0%,
+        rgba(200,185,160,0.8) 15%,
+        rgba(255,255,255,0.5) 55%,
+        rgba(200,185,160,0.3) 85%,
+        transparent 100%
+    );
+    transform: rotate(-2deg);
+    filter: blur(0.5px);
+}
+
+@keyframes crack-appear {
+    0%,60% { opacity: 0; }
+    65%     { opacity: 1; }
+    80%     { opacity: 0.3; }
+    100%    { opacity: 0.6; }
+}
+
+/* ── LOGO SVG ── */
+.logo {
+    pointer-events: auto;
+    position: fixed;
+    top: 12px;
+    left: 1.8rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0;
+    cursor: pointer;
+    text-decoration: none;
+    z-index: 1002;
+    line-height: 1;
+}
+
+.logo-svg {
+    width: 280px;
+    height: 64px;
+    overflow: visible;
+    display: block;
+}
+
+.logo-t-rest {
+    font-size: 26px;
+    font-weight: 600;
+    font-family: 'Courier New', monospace;
+    fill: #c0b8ae;
+}
+
+.logo-t-amstrad {
+    font-size: 50px;
+    font-weight: 900;
+    font-family: 'Courier New', monospace;
+    fill: url(#grad-amstrad);
+    transform: skewX(-12deg) translateY(-4px);
+    transform-origin: bottom left;
+    transform-box: fill-box;
+}
+
+.logo-t-atari {
+    font-size: 56px;
+    font-weight: 900;
+    font-family: 'Courier New', monospace;
+    fill: url(#grad-atari);
+}
+
+.logo-t-amiga {
+    font-size: 52px;
+    font-weight: 900;
+    font-family: 'Courier New', monospace;
+    fill: url(#grad-amiga);
+    transform: skewX(11deg) translateY(4px);
+    transform-origin: bottom right;
+    transform-box: fill-box;
+}
+
+/* ── ACTIONS ── */
+.header-actions {
+    pointer-events: auto;
+    position: fixed;
+    top: 22px;
+    right: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 1002;
+    transform: skewX(10deg) rotate(1.5deg);
+}
+
+.view-toggle {
+    display: flex;
+    gap: 2px;
+}
+
+.view-btn {
+    background: transparent;
+    border: 1px solid var(--border-hi);
+    color: var(--text-dim);
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.view-btn.active {
+    background: var(--green-dim);
+    border-color: var(--green);
+    color: var(--green);
+}
+
+.view-btn:hover:not(.active) {
+    border-color: var(--text-dim);
+    color: var(--text);
+}
+
+/* ── TOUCHE ESC ── */
+.esc-btn {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #fff;
+    background: #c0000a;
+    border: none;
+    border-radius: 4px 4px 3px 3px;
+    padding: 5px 10px 7px;
+    cursor: pointer;
+    position: relative;
+    box-shadow:
+        0 4px 0 #7a0006,
+        0 5px 2px rgba(0,0,0,.6),
+        inset 0 1px 0 rgba(255,255,255,.18);
+    text-shadow: 0 1px 2px rgba(0,0,0,.5);
+    transition: transform 0.08s, box-shadow 0.08s, background 0.08s;
+    user-select: none;
+    margin-left: 6px;
+}
+
+.esc-btn:hover {
+    background: #e0000d;
+}
+
+.esc-btn:active {
+    transform: translateY(3px);
+    box-shadow:
+        0 1px 0 #7a0006,
+        0 2px 1px rgba(0,0,0,.4),
+        inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+/* ── HEADER COUNT WRAPPER ── */
+.header-count {
+    font-family: monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+/* ── NAV ── */
+.nav-links {
+    display: flex;
+    gap: 2.5rem;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.nav-item {
+    text-decoration: none;
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+    position: relative;
+}
+
+.nav-item:hover,
+.nav-item.active {
+    color: var(--text);
+}
+
+.nav-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0; right: 0;
+    height: 1px;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+    .main-header { height: 64px; }
+
+    .hf--logo {
+        width: 100%;
+        height: 100px;
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+        padding-left: 1rem;
+        padding-right: 1rem;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .hf--mid     { display: none; }
+    .hf--actions { display: none; }
+    .hf-crack    { display: none; }
+
+    .detail-page .hf--logo { display: flex; justify-content: flex-end; }
+
+    .main-layout { padding-top: 80px; }
+}

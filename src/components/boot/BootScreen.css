@@ -1,0 +1,307 @@
+/* ============================================================
+   CRT BOOT SCREEN
+   ============================================================ */
+#crt-boot {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #000;
+    pointer-events: all;
+    overflow: hidden;
+}
+
+#crt-boot.crt-done {
+    animation: crt-fadeout 0.3s ease 0s forwards;
+}
+@keyframes crt-fadeout {
+    to { opacity: 0; pointer-events: none; visibility: hidden; }
+}
+
+/* ── BOUTON POWER ── */
+.crt-phase {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5rem;
+    z-index: 10;
+}
+
+@keyframes crt-phase-out {
+    to { opacity: 0; transform: translateY(-10px); }
+}
+
+.crt-power-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    background: transparent;
+    border: 1px solid rgba(158, 212, 178, 0.4);
+    color: #9ed4b2;
+    padding: 1.5rem 3rem;
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+    transition: border-color 0.2s, color 0.2s, box-shadow 0.2s;
+    animation: power-pulse 2s ease-in-out infinite;
+}
+
+@keyframes power-pulse {
+    0%,100% { box-shadow: 0 0 10px rgba(158,212,178,0.1); }
+    50%     { box-shadow: 0 0 30px rgba(158,212,178,0.4), 0 0 60px rgba(158,212,178,0.1); }
+}
+
+.crt-power-btn:hover {
+    border-color: #9ed4b2;
+    box-shadow: 0 0 40px rgba(158,212,178,0.5);
+}
+
+.crt-power-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+}
+
+.crt-power-label {
+    font-size: 0.8rem;
+    font-weight: bold;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+}
+
+.crt-power-hint {
+    font-family: 'Courier New', monospace;
+    font-size: 0.6rem;
+    color: rgba(158, 212, 178, 0.35);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+/* ── TEXTES TYPEWRITER ── */
+.crt-text {
+    font-family: 'Courier New', monospace;
+    color: #9ed4b2;
+    text-shadow: 0 0 10px rgba(158, 212, 178, 0.6);
+    text-align: center;
+    padding: 0 2rem;
+}
+
+.crt-text--big {
+    font-size: 1.8rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+.crt-text--small {
+    font-size: 0.9rem;
+    letter-spacing: 3px;
+    color: rgba(158, 212, 178, 0.7);
+    margin-top: 0.5rem;
+    min-height: 1.5em;
+}
+
+.crt-text::after {
+    content: '█';
+    animation: cursor-blink 0.7s step-end infinite;
+    opacity: 0.8;
+}
+
+.crt-text--done::after {
+    display: none;
+}
+
+@keyframes cursor-blink {
+    0%,100% { opacity: 0.8; }
+    50%     { opacity: 0; }
+}
+
+/* ── SCAN LINES DU BOOT ── */
+.crt-scanlines {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 2px,
+        rgba(0, 0, 0, 0.45) 2px,
+        rgba(0, 0, 0, 0.45) 4px
+    );
+    z-index: 2;
+    opacity: 1;
+    animation: scanlines-fade 0.4s ease 2.4s forwards;
+}
+@keyframes scanlines-fade {
+    to { opacity: 0.15; }
+}
+
+/* ── FLASH BLANC ── */
+.crt-flash {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 20% at 50% 50%,
+        rgba(255,255,255,0.95) 0%,
+        rgba(200,240,200,0.6) 40%,
+        transparent 100%
+    );
+    z-index: 4;
+    opacity: 0;
+}
+@keyframes crt-flash-anim {
+    0%   { opacity: 0;    transform: scaleY(0.02); }
+    30%  { opacity: 1;    transform: scaleY(0.04); }
+    60%  { opacity: 0.8;  transform: scaleY(1.2); }
+    100% { opacity: 0;    transform: scaleY(1); }
+}
+
+/* ── LIGNE CENTRALE ── */
+.crt-line {
+    position: absolute;
+    left: 0; right: 0;
+    top: 50%;
+    height: 2px;
+    transform: translateY(-50%) scaleY(1);
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(180, 255, 180, 0.6) 10%,
+        rgba(255, 255, 255, 0.95) 50%,
+        rgba(180, 255, 180, 0.6) 90%,
+        transparent 100%
+    );
+    z-index: 5;
+    opacity: 0;
+    transform-origin: center center;
+    box-shadow: 0 0 8px rgba(180,255,180,0.8), 0 0 20px rgba(255,255,255,0.3);
+}
+@keyframes crt-line-anim {
+    0%   { opacity: 0;   transform: translateY(-50%) scaleY(0.5); }
+    5%   { opacity: 1;   transform: translateY(-50%) scaleY(1); }
+    15%  { opacity: 1;   transform: translateY(-50%) scaleY(3); }
+    40%  { opacity: 0.9; transform: translateY(-50%) scaleY(80); }
+    70%  { opacity: 0.7; transform: translateY(-50%) scaleY(400); }
+    85%  { opacity: 0.4; transform: translateY(-50%) scaleY(800); }
+    100% { opacity: 0;   transform: translateY(-50%) scaleY(1200); }
+}
+
+/* ── FLICKER ── */
+.crt-flicker {
+    position: absolute;
+    inset: 0;
+    background: rgba(140, 220, 140, 0.04);
+    z-index: 3;
+    opacity: 0;
+}
+@keyframes crt-flicker1 {
+    0%,100% { opacity: 0; }
+    50%     { opacity: 0.35; background: rgba(200,255,200,0.12); }
+}
+@keyframes crt-flicker2 {
+    0%,100% { opacity: 0; }
+    50%     { opacity: 0.2; }
+}
+@keyframes crt-flicker3 {
+    0%,100% { opacity: 0; }
+    30%     { opacity: 0.4; }
+    60%     { opacity: 0.1; }
+}
+@keyframes crt-flicker4 {
+    0%,100% { opacity: 0; }
+    50%     { opacity: 0.25; }
+}
+@keyframes crt-flicker5 {
+    0%,100% { opacity: 0; }
+    40%     { opacity: 0.15; }
+}
+
+/* ── ÉTATS ACTIFS JS-DÉCLENCHÉS ── */
+.crt-flash--active {
+    display: block !important;
+    animation: crt-flash-anim 0.25s ease-out forwards !important;
+}
+
+.crt-line--active {
+    display: block !important;
+    animation: crt-line-anim 1.0s cubic-bezier(0.19, 1, 0.22, 1) forwards !important;
+}
+
+.crt-flicker--active {
+    display: block !important;
+    animation:
+        crt-flicker1 0.08s step-end 0s,
+        crt-flicker2 0.06s step-end 0.12s,
+        crt-flicker3 0.10s step-end 0.22s,
+        crt-flicker4 0.05s step-end 0.4s,
+        crt-flicker5 0.07s step-end 0.5s !important;
+}
+
+/* ── VIGNETTE ── */
+.crt-vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 100% 100% at 50% 50%,
+        transparent 55%,
+        rgba(0,0,0,0.5) 80%,
+        rgba(0,0,0,0.9) 100%
+    );
+    z-index: 1;
+}
+
+/* ============================================================
+   ÉCRAN DE MAINTENANCE
+   ============================================================ */
+#maintenance-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+}
+
+.maintenance-inner {
+    text-align: center;
+    padding: 2rem;
+}
+
+.maintenance-icon {
+    font-size: 4rem;
+    color: var(--accent);
+    animation: maint-spin 4s linear infinite;
+    display: inline-block;
+    margin-bottom: 1.5rem;
+}
+
+@keyframes maint-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+.maintenance-title {
+    font-size: 2rem;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    margin: 0 0 0.75rem;
+    text-shadow: 0 0 20px var(--accent);
+}
+
+.maintenance-sub {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+    margin: 0 0 2rem;
+}
+
+.maintenance-blink {
+    color: var(--green);
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    animation: maint-blink 1.2s step-end infinite;
+}
+
+@keyframes maint-blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+}
