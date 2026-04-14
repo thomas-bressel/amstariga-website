@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchGames, fetchGamesCount } from '../share/models/games';
 import type { GameFilters, GameListItem } from '../share/types/game';
+import Carousel from './Carousel';
 
 const BATCH_SIZE = 50;
 
@@ -44,6 +45,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     const [isLoading, setIsLoading] = useState(false);
     const [filters, setFilters]     = useState<GameFilters>({ categories: [], years: [] });
     const [sheetOpen, setSheetOpen] = useState(false);
+    const [view, setView]           = useState<'grid' | 'cover'>('grid');
 
     const sentinelRef = useRef<HTMLDivElement>(null);
     const filtersRef  = useRef<GameFilters>(filters);
@@ -170,6 +172,28 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
             {/* ── Stats + FAB ── */}
             <div className="stats-bar">
                 <span><span>{total}</span> jeux</span>
+                <div className="view-toggle">
+                    <button
+                        className={`view-btn ${view === 'grid' ? 'active' : ''}`}
+                        onClick={() => setView('grid')}
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                        </svg>
+                    </button>
+                    <button
+                        className={`view-btn ${view === 'cover' ? 'active' : ''}`}
+                        onClick={() => setView('cover')}
+                    >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <button
@@ -183,20 +207,24 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                 {activeCount > 0 && <span className="fab-badge show">{activeCount}</span>}
             </button>
 
-            {/* ── Grille ── */}
-            <div className="games-container">
-                {games.map(game => (
-                    <a key={game.id} className="game-card screenshot-mode" href={`/game/${game.id}`}>
-                        <div className="game-screenshot">
-                            <div className="screenshot-placeholder pixel-effect">🎮</div>
-                        </div>
-                        <div className="game-info">
-                            <div className="game-title">{game.main_title}</div>
-                            <div className="game-year-publisher">{game.release_year}</div>
-                        </div>
-                    </a>
-                ))}
-            </div>
+            {/* ── Carousel ou Grille ── */}
+            {view === 'cover' ? (
+                <Carousel games={games} />
+            ) : (
+                <div className="games-container">
+                    {games.map(game => (
+                        <a key={game.id} className="game-card screenshot-mode" href={`/game/${game.id}`}>
+                            <div className="game-screenshot">
+                                <div className="screenshot-placeholder pixel-effect">🎮</div>
+                            </div>
+                            <div className="game-info">
+                                <div className="game-title">{game.main_title}</div>
+                                <div className="game-year-publisher">{game.release_year}</div>
+                            </div>
+                        </a>
+                    ))}
+                </div>
+            )}
 
             {isLoading && <div className="loader">Chargement...</div>}
             <div ref={sentinelRef} style={{ height: 20 }} />
