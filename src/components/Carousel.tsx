@@ -44,7 +44,7 @@ export default function Carousel({ games }: Props) {
 
     return (
         <div
-            className="carousel-container"
+            className="carousel-container is-visible no-transition"
             onWheel={e => { e.preventDefault(); e.deltaY > 0 ? move(1) : move(-1); }}
             onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={e => {
@@ -55,31 +55,35 @@ export default function Carousel({ games }: Props) {
             <div className="carousel-scene">
                 <div className="carousel-wheel" ref={wheelRef} style={{ transform: `rotateY(${angle}deg)` }}>
                     {SLOTS.map(offset => {
-                        const gameIdx  = ((index + offset) % total + total) % total;
-                        const game     = games[gameIdx];
                         const itemAngle = offset * STEP;
-                        const abs      = Math.abs(offset);
-
+                        const abs       = Math.abs(offset);
                         return (
-                            <div key={offset}>
-                                <div
-                                    className="carousel-shadow"
-                                    style={{
-                                        transform: `rotateY(${itemAngle}deg) translateZ(${RADIUS}px) rotateX(90deg) scaleY(1.8)`,
-                                        opacity: abs === 0 ? 0.85 : abs === 1 ? 0.5 : 0.2,
-                                    }}
-                                />
-                                <div
-                                    className={`carousel-item${abs === 0 ? ' is-active' : abs === 1 ? ' is-adjacent' : ''}`}
-                                    style={{
-                                        transform: `rotateY(${itemAngle}deg) translateZ(${RADIUS}px)`,
-                                        opacity: abs === 0 ? 1 : abs === 1 ? 0.75 : abs === 2 ? 0.45 : 0.2,
-                                        cursor: 'pointer',
-                                    }}
-                                    onClick={() => { window.location.href = `/game/${game.id}`; }}
-                                >
-                                    <span style={{ fontSize: '5rem', filter: 'drop-shadow(0 0 8px var(--accent))' }}>📦</span>
-                                </div>
+                            <div
+                                key={`shadow-${offset}`}
+                                className="carousel-shadow"
+                                style={{
+                                    transform: `rotateY(${itemAngle}deg) translateZ(${RADIUS}px) rotateX(90deg) scaleY(1.8)`,
+                                    opacity: abs === 0 ? 0.85 : abs === 1 ? 0.5 : 0.2,
+                                }}
+                            />
+                        );
+                    })}
+                    {SLOTS.map(offset => {
+                        const gameIdx   = ((index + offset) % total + total) % total;
+                        const game      = games[gameIdx];
+                        const itemAngle = offset * STEP;
+                        const abs       = Math.abs(offset);
+                        return (
+                            <div
+                                key={`item-${offset}`}
+                                className={`carousel-item${abs === 0 ? ' is-active' : abs === 1 ? ' is-adjacent' : ''}`}
+                                style={{
+                                    transform: `rotateY(${itemAngle}deg) translateZ(${RADIUS}px)`,
+                                    opacity: abs === 0 ? 1 : abs === 1 ? 0.75 : abs === 2 ? 0.45 : 0.2,
+                                }}
+                                onClick={() => { window.location.href = `/game/${game.id}`; }}
+                            >
+                                <span style={{ fontSize: '5rem', filter: 'drop-shadow(0 0 8px var(--accent))' }}>📦</span>
                             </div>
                         );
                     })}
