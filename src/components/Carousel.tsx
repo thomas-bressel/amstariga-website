@@ -1,9 +1,9 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameListItem } from '../share/types/game';
 
-const RADIUS      = 480;
-const STEP        = 30;
-const SLOTS       = [-3, -2, -1, 0, 1, 2, 3];
+const RADIUS = 480;
+const STEP   = 30;
+const SLOTS  = [-3, -2, -1, 0, 1, 2, 3];
 
 interface Props {
     games: GameListItem[];
@@ -14,6 +14,7 @@ export default function Carousel({ games }: Props) {
     const [angle, setAngle]         = useState(0);
     const [animating, setAnimating] = useState(false);
     const wheelRef                  = useRef<HTMLDivElement>(null);
+    const containerRef              = useRef<HTMLDivElement>(null);
     const touchStartX               = useRef(0);
     const total                     = games.length;
 
@@ -38,14 +39,40 @@ export default function Carousel({ games }: Props) {
         });
     }, [animating, angle, total]);
 
+    // Show carousel — immediately on return visit, or via boot event on first visit
+    const [visible, setVisible] = useState(false);
+    useEffect(() => {
+        if (localStorage.getItem('amstariga_visited')) {
+            setVisible(true);
+            return;
+        }
+        const handler = () => setVisible(true);
+        window.addEventListener('retro:carousel-show', handler);
+        return () => window.removeEventListener('retro:carousel-show', handler);
+    }, []);
+
+    // Attach wheel listener with { passive: false } so preventDefault works
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const handler = (e: WheelEvent) => {
+            e.preventDefault();
+            move(e.deltaY > 0 ? 1 : -1);
+        };
+
+        container.addEventListener('wheel', handler, { passive: false });
+        return () => container.removeEventListener('wheel', handler);
+    }, [move]);
+
     if (!total) return null;
 
     const active = games[index];
 
     return (
         <div
-            className="carousel-container is-visible no-transition"
-            onWheel={e => { e.preventDefault(); e.deltaY > 0 ? move(1) : move(-1); }}
+            ref={containerRef}
+            className={`carousel-container${visible ? ' is-visible' : ''}`}
             onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={e => {
                 const dx = e.changedTouches[0].clientX - touchStartX.current;

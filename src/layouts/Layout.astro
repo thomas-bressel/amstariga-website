@@ -2,6 +2,8 @@
 import '../assets/style.css';
 import Header from '../components/Header.astro';
 import ThemeInit from '../components/ThemeInit.astro';
+import Background3D from '../components/Background3D.astro';
+import BootScreen from '../components/BootScreen.astro';
 ---
 <!doctype html>
 <html lang="fr">
@@ -13,6 +15,8 @@ import ThemeInit from '../components/ThemeInit.astro';
 	</head>
 	<body>
 		<ThemeInit />
+		<BootScreen />
+		<Background3D />
 		<Header />
 		<slot />
 	</body>

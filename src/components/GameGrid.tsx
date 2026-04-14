@@ -40,12 +40,22 @@ interface Props {
 export default function GameGrid({ initialGames, initialTotal }: Props) {
     const [games, setGames]         = useState<GameListItem[]>(initialGames);
     const [total, setTotal]         = useState(initialTotal);
+
+    // Sync total to TapeCounter in header
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('retro:count-update', { detail: { count: total } }));
+    }, [total]);
     const [offset, setOffset]       = useState(initialGames.length);
     const [hasMore, setHasMore]     = useState(initialGames.length === BATCH_SIZE);
     const [isLoading, setIsLoading] = useState(false);
     const [filters, setFilters]     = useState<GameFilters>({ categories: [], years: [] });
     const [sheetOpen, setSheetOpen] = useState(false);
     const [view, setView]           = useState<'grid' | 'cover'>('cover');
+
+    useEffect(() => {
+        document.body.style.overflow = view === 'cover' ? 'hidden' : '';
+        return () => { document.body.style.overflow = ''; };
+    }, [view]);
 
     const sentinelRef = useRef<HTMLDivElement>(null);
     const filtersRef  = useRef<GameFilters>(filters);
@@ -54,6 +64,15 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     // Keep refs in sync so the IntersectionObserver callback sees fresh values.
     filtersRef.current = filters;
     offsetRef.current  = offset;
+
+    // On mount — if returning visitor, show chip bar immediately
+    useEffect(() => {
+        const chipbar = document.querySelector('.filter-chip-bar');
+        if (!chipbar) return;
+        if (localStorage.getItem('amstariga_visited')) {
+            chipbar.classList.add('is-visible', 'no-transition');
+        }
+    }, []);
 
     // ------------------------------------------------------------------
     // Scroll infini — IntersectionObserver sur le sentinel en bas de page
@@ -144,7 +163,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     return (
         <div>
             {/* ── Chip bar ── */}
-            <div className="filter-chip-bar is-visible no-transition">
+            <div className="filter-chip-bar">
                 <button
                     className={`fchip fchip-all ${activeCount === 0 ? 'fchip-active' : ''}`}
                     onClick={resetFilters}
@@ -177,11 +196,6 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                     ))}
                 </div>
             )}
-
-            {/* ── Stats + FAB ── */}
-            <div className="stats-bar">
-                <span><span>{total}</span> jeux</span>
-            </div>
 
             <button
                 className={`filter-fab ${activeCount > 0 ? 'has-active' : ''}`}

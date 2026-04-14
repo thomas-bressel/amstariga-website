@@ -1,0 +1,312 @@
+---
+---
+<div id="crt-boot" aria-hidden="true">
+  <div class="crt-scanlines"></div>
+  <div class="crt-vignette"></div>
+
+  <!-- Phase 1 : écran éteint — bouton power -->
+  <div class="crt-phase" id="crt-phase-off">
+    <button id="crt-power-btn" class="crt-power-btn">
+      <span class="crt-power-icon">⏻</span>
+      <span class="crt-power-label">ALLUMER</span>
+    </button>
+    <p class="crt-power-hint">Appuie pour activer le son et démarrer</p>
+  </div>
+
+  <!-- Phase 2 : bienvenue -->
+  <div class="crt-phase" id="crt-phase-welcome" style="display:none;">
+    <p class="crt-text crt-text--big"   id="crt-txt-1"></p>
+    <p class="crt-text crt-text--big"   id="crt-txt-2"></p>
+    <p class="crt-text crt-text--small" id="crt-txt-3"></p>
+  </div>
+
+  <!-- Phase 3 : flash CRT -->
+  <div class="crt-line"    id="crt-line"    style="display:none;"></div>
+  <div class="crt-flash"   id="crt-flash"   style="display:none;"></div>
+  <div class="crt-flicker" id="crt-flicker" style="display:none;"></div>
+</div>
+
+<div id="crt-overlay" aria-hidden="true"></div>
+
+<script is:inline>
+(function () {
+    'use strict';
+
+    var ctx = null;
+
+    function initAudio() {
+        if (ctx) return;
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    function beep(freq, type, duration, vol, delay) {
+        if (!ctx) return;
+        var osc  = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = type || 'square';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + (delay || 0));
+        gain.gain.setValueAtTime(0, ctx.currentTime + (delay || 0));
+        gain.gain.linearRampToValueAtTime(vol || 0.3, ctx.currentTime + (delay || 0) + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (delay || 0) + duration);
+        osc.start(ctx.currentTime + (delay || 0));
+        osc.stop(ctx.currentTime + (delay || 0) + duration + 0.05);
+    }
+
+    function keyClick() {
+        if (!ctx) return;
+        var buf  = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
+        var data = buf.getChannelData(0);
+        for (var i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+        var src  = ctx.createBufferSource();
+        var gain = ctx.createGain();
+        var filt = ctx.createBiquadFilter();
+        filt.type = 'bandpass'; filt.frequency.value = 3000; filt.Q.value = 0.8;
+        src.buffer = buf;
+        src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.4, ctx.currentTime);
+        src.start(); src.stop(ctx.currentTime + 0.05);
+    }
+
+    function impactSound() {
+        if (!ctx) return;
+        var now = ctx.currentTime;
+        var bufLen = ctx.sampleRate * 0.008;
+        var buf    = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+        var data   = buf.getChannelData(0);
+        for (var i = 0; i < bufLen; i++) data[i] = (Math.random() * 2 - 1);
+        var src = ctx.createBufferSource(), gImpact = ctx.createGain();
+        src.buffer = buf; src.connect(gImpact); gImpact.connect(ctx.destination);
+        gImpact.gain.setValueAtTime(0.9, now);
+        src.start(now); src.stop(now + 0.012);
+        var o1 = ctx.createOscillator(), g1 = ctx.createGain();
+        o1.type = 'sine';
+        o1.frequency.setValueAtTime(1800, now); o1.frequency.exponentialRampToValueAtTime(900, now + 0.25);
+        g1.gain.setValueAtTime(0.35, now); g1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        o1.connect(g1); g1.connect(ctx.destination); o1.start(now); o1.stop(now + 0.4);
+        var o2 = ctx.createOscillator(), g2 = ctx.createGain();
+        o2.type = 'sine';
+        o2.frequency.setValueAtTime(4200, now); o2.frequency.exponentialRampToValueAtTime(2100, now + 0.18);
+        g2.gain.setValueAtTime(0.2, now); g2.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        o2.connect(g2); g2.connect(ctx.destination); o2.start(now); o2.stop(now + 0.25);
+    }
+
+    function carouselGrow() {
+        if (!ctx) return;
+        var osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(120, ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(440, ctx.currentTime + 0.6);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.0, ctx.currentTime + 0.7);
+        osc.start(); osc.stop(ctx.currentTime + 0.75);
+    }
+
+    function carouselBounce() {
+        if (!ctx) return;
+        var osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(660, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.4);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+        osc.start(); osc.stop(ctx.currentTime + 0.5);
+    }
+
+    function crtImagePop() {
+        if (!ctx) return;
+        var buf  = ctx.createBuffer(1, ctx.sampleRate * 0.06, ctx.sampleRate);
+        var data = buf.getChannelData(0);
+        for (var i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 1.5);
+        var src = ctx.createBufferSource(), gain = ctx.createGain(), filt = ctx.createBiquadFilter();
+        filt.type = 'bandpass'; filt.frequency.value = 6000; filt.Q.value = 0.4;
+        src.buffer = buf; src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.6, ctx.currentTime);
+        src.start(); src.stop(ctx.currentTime + 0.08);
+        var osc = ctx.createOscillator(), og = ctx.createGain();
+        osc.connect(og); og.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(14000, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.25);
+        og.gain.setValueAtTime(0.18, ctx.currentTime);
+        og.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        osc.start(); osc.stop(ctx.currentTime + 0.35);
+        beep(50, 'sine', 0.4, 0.08, 0.05);
+    }
+
+    function crtPowerOn() {
+        if (!ctx) return;
+        beep(60,   'sawtooth', 0.3,  0.15, 0);
+        beep(120,  'square',   0.2,  0.1,  0.1);
+        beep(800,  'sine',     0.1,  0.2,  0.3);
+        beep(3000, 'sine',     0.05, 0.15, 0.35);
+    }
+
+    function typewrite(el, text, speed, cb) {
+        el.textContent = '';
+        var i = 0;
+        function tick() {
+            if (i < text.length) {
+                el.textContent += text[i++];
+                keyClick();
+                setTimeout(tick, speed + (Math.random() * speed * 0.4));
+            } else if (cb) { cb(); }
+        }
+        tick();
+    }
+
+    function launchUISequence() {
+        var logo    = document.querySelector('.hf--logo');
+        var mid     = document.querySelector('.hf--mid');
+        var actions = document.querySelector('.hf--actions');
+        var cracks  = document.querySelectorAll('.hf-crack');
+        var chipbar = document.querySelector('.filter-chip-bar');
+        var BASE    = 2000;
+
+        setTimeout(function () { if (logo)    logo.classList.add('is-visible');    impactSound(); }, BASE);
+        setTimeout(function () { if (mid)     mid.classList.add('is-visible');     impactSound(); }, BASE + 700);
+        setTimeout(function () { if (actions) actions.classList.add('is-visible'); impactSound(); }, BASE + 1400);
+        setTimeout(function () {
+            cracks.forEach(function (c) { c.classList.add('is-visible'); });
+            beep(1200, 'sine', 0.06, 0.15, 0);
+        }, BASE + 1800);
+        setTimeout(function () {
+            if (chipbar) chipbar.classList.add('is-visible');
+            beep(180, 'sine', 0.1, 0.12, 0);
+        }, BASE + 2200);
+        setTimeout(function () {
+            window.dispatchEvent(new CustomEvent('retro:carousel-show'));
+            carouselGrow();
+            setTimeout(carouselBounce, 620);
+        }, BASE + 2800);
+    }
+
+    /* ── EXTINCTION ── */
+    window.crtShutdown = function () {
+        try { initAudio(); } catch (e) {}
+        if (ctx) {
+            var now = ctx.currentTime;
+            var bufLen = Math.floor(ctx.sampleRate * 0.04);
+            var buf    = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+            var data   = buf.getChannelData(0);
+            for (var i = 0; i < bufLen; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufLen);
+            var src = ctx.createBufferSource(), gCrack = ctx.createGain();
+            src.buffer = buf; src.connect(gCrack); gCrack.connect(ctx.destination);
+            gCrack.gain.setValueAtTime(0.7, now);
+            src.start(now); src.stop(now + 0.05);
+            var osc = ctx.createOscillator(), og = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(14000, now);
+            osc.frequency.exponentialRampToValueAtTime(40, now + 0.6);
+            og.gain.setValueAtTime(0.22, now); og.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+            osc.connect(og); og.connect(ctx.destination); osc.start(now); osc.stop(now + 0.7);
+            beep(55, 'sine', 0.35, 0.18, 0.05);
+            beep(30, 'sine', 0.25, 0.12, 0.2);
+        }
+        var overlay = document.createElement('div');
+        overlay.setAttribute('aria-hidden', 'true');
+        overlay.innerHTML =
+            '<div class="crt-scanlines"></div><div class="crt-vignette"></div>' +
+            '<div class="crt-line" style="display:block"></div>' +
+            '<div class="crt-flash" style="display:block"></div>' +
+            '<div class="crt-flicker" style="display:block"></div>';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#000;opacity:0;transition:opacity 0.08s';
+        document.body.appendChild(overlay);
+        overlay.querySelector('.crt-flicker').classList.add('crt-flicker--active');
+        setTimeout(function () { overlay.querySelector('.crt-flash').classList.add('crt-flash--active'); }, 120);
+        setTimeout(function () { overlay.querySelector('.crt-line').classList.add('crt-line--active');   }, 200);
+        setTimeout(function () { overlay.style.opacity = '1'; }, 350);
+        setTimeout(function () {
+            var phaseDiv = document.createElement('div');
+            phaseDiv.className = 'crt-phase';
+            phaseDiv.innerHTML =
+                '<button class="crt-power-btn"><span class="crt-power-icon">⏻</span>' +
+                '<span class="crt-power-label">ALLUMER</span></button>' +
+                '<p class="crt-power-hint">Appuie pour activer le son et démarrer</p>';
+            overlay.appendChild(phaseDiv);
+            phaseDiv.querySelector('.crt-power-btn').addEventListener('click', function () {
+                window.location.reload();
+            });
+        }, 650);
+    };
+
+    /* ── BOOT ── */
+    var boot      = document.getElementById('crt-boot');
+    var phaseOff  = document.getElementById('crt-phase-off');
+    var phaseWelc = document.getElementById('crt-phase-welcome');
+    var txt1      = document.getElementById('crt-txt-1');
+    var txt2      = document.getElementById('crt-txt-2');
+    var txt3      = document.getElementById('crt-txt-3');
+    var crtLine   = document.getElementById('crt-line');
+    var crtFlash  = document.getElementById('crt-flash');
+    var crtFlicker = document.getElementById('crt-flicker');
+    var powerBtn  = document.getElementById('crt-power-btn');
+
+    var firstVisit = !localStorage.getItem('amstariga_visited');
+
+    function startSequence() {
+        phaseOff.style.display  = 'none';
+        phaseWelc.style.display = 'flex';
+        typewrite(txt1, 'Coucou c\'est Zisquier !!', 60, function () {
+            txt1.classList.add('crt-text--done');
+            setTimeout(function () {
+                typewrite(txt2, 'Bienvenue chez moi ;)', 60, function () {
+                    txt2.classList.add('crt-text--done');
+                    setTimeout(function () {
+                        typewrite(txt3, 'Attends... je démarre mon CPC...', 60, function () {
+                            setTimeout(function () {
+                                phaseWelc.style.animation = 'crt-phase-out 0.5s ease forwards';
+                                setTimeout(function () {
+                                    phaseWelc.style.display = 'none';
+                                    crtPowerOn();
+                                    crtFlash.style.display   = 'block';
+                                    crtLine.style.display    = 'block';
+                                    crtFlicker.style.display = 'block';
+                                    crtFlash.classList.add('crt-flash--active');
+                                    crtLine.classList.add('crt-line--active');
+                                    setTimeout(function () { crtFlicker.classList.add('crt-flicker--active'); }, 800);
+                                    setTimeout(function () {
+                                        crtImagePop();
+                                        boot.classList.add('crt-done');
+                                        setTimeout(function () { boot.remove(); }, 350);
+                                        launchUISequence();
+                                    }, 2500);
+                                }, 500);
+                            }, 800);
+                        });
+                    }, 800);
+                });
+            }, 800);
+        });
+    }
+
+    if (firstVisit) {
+        powerBtn.addEventListener('click', function () {
+            localStorage.setItem('amstariga_visited', '1');
+            initAudio();
+            beep(440, 'square', 0.1, 0.2, 0);
+            startSequence();
+        });
+    } else {
+        boot.remove();
+        function showImmediate() {
+            var logo    = document.querySelector('.hf--logo');
+            var mid     = document.querySelector('.hf--mid');
+            var actions = document.querySelector('.hf--actions');
+            var cracks  = document.querySelectorAll('.hf-crack');
+            [logo, mid, actions].forEach(function (el) {
+                if (el) el.classList.add('is-visible', 'no-transition');
+            });
+            cracks.forEach(function (c) { c.classList.add('is-visible', 'no-transition'); });
+            window.dispatchEvent(new CustomEvent('retro:carousel-show'));
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', showImmediate);
+        } else {
+            showImmediate();
+        }
+    }
+})();
+</script>

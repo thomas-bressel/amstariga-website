@@ -1,9 +1,10 @@
 ---
+import TapeCounter from './TapeCounter';
 ---
 <header class="main-header">
 
   <!-- FRAGMENT 1 : logo -->
-  <div class="hf hf--logo is-visible no-transition">
+  <div class="hf hf--logo ">
     <div class="logo">
       <svg class="logo-svg" viewBox="0 0 280 64" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -39,10 +40,12 @@
   </div>
 
   <!-- FRAGMENT 2 : bande centrale -->
-  <div class="hf hf--mid is-visible no-transition"></div>
+  <div class="hf hf--mid ">
+    <span id="header-count"><TapeCounter value={0} client:only="react" /></span>
+  </div>
 
   <!-- FRAGMENT 3 : actions -->
-  <div class="hf hf--actions is-visible no-transition">
+  <div class="hf hf--actions ">
     <div class="header-actions">
       <div class="view-toggle">
         <button class="view-btn" data-view="grid">
@@ -65,12 +68,20 @@
   </div>
 
   <!-- FISSURES -->
-  <div class="hf-crack hf-crack--1 is-visible no-transition"></div>
-  <div class="hf-crack hf-crack--2 is-visible no-transition"></div>
+  <div class="hf-crack hf-crack--1 "></div>
+  <div class="hf-crack hf-crack--2 "></div>
 
 </header>
 
 <script is:inline>
+  var escBtn = document.getElementById('esc-btn');
+  if (escBtn) {
+    escBtn.addEventListener('click', function () {
+      localStorage.removeItem('amstariga_visited');
+      if (typeof window.crtShutdown === 'function') window.crtShutdown();
+    });
+  }
+
   document.querySelectorAll('.view-btn[data-view]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var view = this.dataset.view;
