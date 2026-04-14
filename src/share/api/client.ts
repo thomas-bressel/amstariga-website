@@ -1,7 +1,16 @@
-/** Base URL of the Go API — nginx proxy on port 8090 in dev */
-// const API_BASE = 'http://localhost:8090';
-
-const API_BASE = 'http://amstariga-api-staging:8090';
+/**
+ * Base URL of the Go API.
+ * - Server-side (SSR / Docker): `API_INTERNAL_URL` — internal Docker service name,
+ *   fast and without TLS overhead (e.g. `http://amstariga-api-staging:8090`).
+ * - Client-side (browser): `PUBLIC_API_URL` — public HTTPS endpoint; must be HTTPS
+ *   to avoid mixed-content blocking, and must be reachable from the user's machine.
+ *
+ * Both values are injected via environment variables so the same build works
+ * across dev, staging, and production without code changes.
+ */
+const API_BASE = typeof window === 'undefined'
+    ? import.meta.env.API_INTERNAL_URL   // SSR — internal Docker network
+    : import.meta.env.PUBLIC_API_URL;    // Browser — public HTTPS endpoint
 /**
  * Performs a GET request to the Go API and returns the parsed JSON.
  *
