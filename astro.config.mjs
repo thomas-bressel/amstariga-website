@@ -1,8 +1,6 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
-
 import node from '@astrojs/node';
-
 import react from '@astrojs/react';
 
 // https://astro.build/config
@@ -11,6 +9,10 @@ export default defineConfig({
   adapter: node({
     mode: 'standalone'
   }),
-
+// For docker developpment
+server: {
+  host: true, // aquals to 0.0.0.0, permit to container to get external acces
+  port: 4321
+},
   integrations: [react()]
 });

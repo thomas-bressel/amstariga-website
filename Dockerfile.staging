@@ -1,0 +1,47 @@
+# ── Stage 1: Build ────────────────────────────────────────────────────────────
+FROM node:24-alpine3.22 AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+ENV NODE_ENV=production
+ENV APP_ENV=staging
+
+RUN npm run build
+
+# ── Stage 2: Staging ───────────────────────────────────────────────────────────
+FROM node:24-alpine3.22 AS staging
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV APP_ENV=staging
+ENV PORT=4321
+ENV HOSTNAME=0.0.0.0
+
+# On récupère le dossier dist généré par Astro
+# Avec l'adaptateur Node standalone, tout est dans ./dist
+COPY --from=builder /app/dist ./dist
+# On a quand même besoin des dépendances de prod pour le serveur node
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+
+# Sécurité : on ne tourne pas en root
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S astrojs -u 1001 && \
+    chown -R astrojs:nodejs /app
+
+USER astrojs
+
+EXPOSE 4321
+
+
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:4321 || exit 1
+
+# L'entrée d'un projet Astro avec l'adaptateur Node est dans dist/server/entry.mjs
+CMD ["node", "./dist/server/entry.mjs"]

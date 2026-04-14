@@ -1,0 +1,18 @@
+FROM node:24-alpine3.22
+
+WORKDIR /app
+
+# Copier les fichiers de dépendances
+COPY package*.json ./
+
+# Installer toutes les dépendances (y compris dev)
+RUN npm install
+
+# Le code source est monté via volume (hot reload)
+EXPOSE 4321
+
+ENV PORT=4321
+ENV HOSTNAME="0.0.0.0"
+ENV NODE_ENV=development
+
+CMD ["npm", "run", "dev"]
