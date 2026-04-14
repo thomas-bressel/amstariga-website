@@ -9,8 +9,8 @@
  * across dev, staging, and production without code changes.
  */
 const API_BASE = typeof window === 'undefined'
-    ? import.meta.env.API_INTERNAL_URL   // SSR — internal Docker network (server-only var)
-    : import.meta.env.PUBLIC_API_URL;    // Browser — public HTTPS endpoint
+    ? process.env.API_INTERNAL_URL       // SSR — internal Docker network (runtime env var)
+    : import.meta.env.PUBLIC_API_URL;    // Browser — baked in at build time (PUBLIC_ prefix)
 /**
  * Performs a GET request to the Go API and returns the parsed JSON.
  *
