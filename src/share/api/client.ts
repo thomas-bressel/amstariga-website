@@ -1,6 +1,7 @@
 /** Base URL of the Go API — nginx proxy on port 8090 in dev */
-const API_BASE = 'http://localhost:8090';
+// const API_BASE = 'http://localhost:8090';
 
+const API_BASE = 'http://amstariga-api-staging:8090';
 /**
  * Performs a GET request to the Go API and returns the parsed JSON.
  *
