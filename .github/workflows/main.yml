@@ -34,8 +34,8 @@ jobs:
         build-args: |
           APP_ENV=production
         tags: |
-          ${{ secrets.DOCKERHUB_USERNAME }}/daily-games-landing:latest
-          ${{ secrets.DOCKERHUB_USERNAME }}/daily-games-landing:${{ github.sha }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/amstariga-website:prod
+          ${{ secrets.DOCKERHUB_USERNAME }}/amstariga-website:${{ github.sha }}
 
     - name: Deploy to VPS
       uses: appleboy/ssh-action@v1.0.3
@@ -45,16 +45,16 @@ jobs:
         key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
         port: ${{ secrets.VPS_PORT }}
         script: |
-          cd /var/www/applications/daily-games/landing/production
+          cd /var/www/applications/amstariga/website/production
 
           # Récupérer la nouvelle image
-          docker compose pull landing
+          docker compose pull amstariga-website
 
           # Recréer et relancer le container avec la nouvelle image
-          docker compose up -d --force-recreate --no-deps landing
+          docker compose up -d --force-recreate --no-deps amstariga-website
 
           # Vérifier le statut
-          docker compose ps landing
+          docker compose ps amstariga-website
 
           # Nettoyer les anciennes images
           docker image prune -f
