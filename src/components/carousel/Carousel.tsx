@@ -2,17 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameListItem } from '../../share/types/game';
 import './Carousel.css';
 
-/** Radius of the 3-D wheel in pixels — controls how far apart items appear. */
-const RADIUS = 480;
-
 /** Angular step in degrees between adjacent carousel slots. */
-const STEP   = 30;
+const STEP = 18;
 
-/**
- * Slot offsets relative to the active item.
- * Negative = left, positive = right, 0 = centre.
- */
-const SLOTS  = [-3, -2, -1, 0, 1, 2, 3];
+/** Returns radius and slot offsets based on viewport width. */
+function getLayout(width: number): { radius: number; slots: number[] } {
+    if (width >= 1600) return { radius: 900, slots: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5] };
+    if (width >= 1200) return { radius: 750, slots: [-4, -3, -2, -1, 0, 1, 2, 3, 4] };
+    return                     { radius: 600, slots: [-3, -2, -1, 0, 1, 2, 3] };
+}
 
 /** Props for {@link Carousel}. */
 interface Props {
@@ -38,10 +36,20 @@ export default function Carousel({ games }: Props) {
     const [index, setIndex]         = useState(0);
     const [angle, setAngle]         = useState(0);
     const [animating, setAnimating] = useState(false);
+    const [layout, setLayout]       = useState(() => getLayout(1200));
     const wheelRef                  = useRef<HTMLDivElement>(null);
     const containerRef              = useRef<HTMLDivElement>(null);
     const touchStartX               = useRef(0);
     const total                     = games.length;
+
+    useEffect(() => {
+        setLayout(getLayout(window.innerWidth));
+        const onResize = () => setLayout(getLayout(window.innerWidth));
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
+
+    const { radius, slots } = layout;
 
     /**
      * Rotates the carousel by one slot in the given direction.
@@ -59,7 +67,7 @@ export default function Carousel({ games }: Props) {
         if (!wheel) { setAnimating(false); return; }
 
         const nextAngle = angle - direction * STEP;
-        wheel.style.transition = 'transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        wheel.style.transition = 'transform 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
         wheel.style.transform  = `rotateY(${nextAngle}deg)`;
 
         wheel.addEventListener('transitionend', function handler() {
@@ -114,7 +122,7 @@ export default function Carousel({ games }: Props) {
         >
             <div className="carousel-scene">
                 <div className="carousel-wheel" ref={wheelRef} style={{ transform: `rotateY(${angle}deg)` }}>
-                    {SLOTS.map(offset => {
+                    {slots.map(offset => {
                         const itemAngle = offset * STEP;
                         const abs       = Math.abs(offset);
                         return (
@@ -122,13 +130,13 @@ export default function Carousel({ games }: Props) {
                                 key={`shadow-${offset}`}
                                 className="carousel-shadow"
                                 style={{
-                                    transform: `rotateY(${itemAngle}deg) translateZ(${RADIUS}px) rotateX(90deg) scaleY(1.8)`,
+                                    transform: `rotateY(${itemAngle}deg) translateZ(${radius}px) rotateX(90deg) scaleY(1.8)`,
                                     opacity: abs === 0 ? 0.85 : abs === 1 ? 0.5 : 0.2,
                                 }}
                             />
                         );
                     })}
-                    {SLOTS.map(offset => {
+                    {slots.map(offset => {
                         const gameIdx   = ((index + offset) % total + total) % total;
                         const game      = games[gameIdx];
                         const itemAngle = offset * STEP;
@@ -138,7 +146,7 @@ export default function Carousel({ games }: Props) {
                                 key={`item-${offset}`}
                                 className={`carousel-item${abs === 0 ? ' is-active' : abs === 1 ? ' is-adjacent' : ''}`}
                                 style={{
-                                    transform: `rotateY(${itemAngle}deg) translateZ(${RADIUS}px)`,
+                                    transform: `rotateY(${itemAngle}deg) translateZ(${radius}px)`,
                                     opacity: abs === 0 ? 1 : abs === 1 ? 0.75 : abs === 2 ? 0.45 : 0.2,
                                 }}
                                 onClick={() => { window.location.href = `/game/${game.id}`; }}

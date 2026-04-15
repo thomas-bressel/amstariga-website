@@ -1,0 +1,26 @@
+---
+import DetailLayout from '../../layouts/DetailLayout.astro';
+import GameDetail from '../../components/detail/GameDetail';
+import '../../components/detail/Detail.css';
+import { getDetailData } from '../../controllers/detail.controller';
+
+const { id } = Astro.params;
+const gameId  = parseInt(id ?? '', 10);
+
+if (!gameId || isNaN(gameId)) {
+    return Astro.redirect('/');
+}
+
+let game;
+try {
+    ({ game } = await getDetailData(gameId));
+} catch {
+    return Astro.redirect('/');
+}
+
+const title = `AmstArigA — ${game.main_title}`;
+---
+
+<DetailLayout title={title} gameId={gameId}>
+    <GameDetail game={game} client:load />
+</DetailLayout>

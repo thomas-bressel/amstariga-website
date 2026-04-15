@@ -1,0 +1,112 @@
+---
+import '../styles/global.css';
+import '../components/header/Header.css';
+import ThemeInit from '../components/boot/ThemeInit.astro';
+
+interface Props {
+    title?: string;
+    gameId?: number;
+}
+
+const { title = 'AmstArigA — Fiche jeu', gameId } = Astro.props;
+---
+<!doctype html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" href="/favicon.ico" />
+        <title>{title}</title>
+        <style>
+            @media (prefers-reduced-motion: no-preference) {
+                ::view-transition-old(game-card) {
+                    animation: vt-card-out 0.35s ease-in both;
+                }
+                ::view-transition-new(game-card) {
+                    animation: vt-card-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+                }
+                @keyframes vt-card-out {
+                    to { opacity: 0; transform: scale(1.05); }
+                }
+                @keyframes vt-card-in {
+                    from { opacity: 0; transform: scale(0.92) translateY(20px); }
+                    to   { opacity: 1; transform: scale(1)    translateY(0); }
+                }
+                ::view-transition-old(root) { animation: none; }
+                ::view-transition-new(root) {
+                    animation: vt-page-in 0.4s ease both;
+                }
+                @keyframes vt-page-in {
+                    from { opacity: 0; }
+                    to   { opacity: 1; }
+                }
+            }
+        </style>
+    </head>
+    <body class="detail-page">
+        <ThemeInit />
+
+        <!-- Scan lines permanentes (sans Three.js) -->
+        <div id="crt-overlay" aria-hidden="true"></div>
+
+        <!-- Header simplifié : logo cliquable + bouton retour -->
+        <header class="main-header">
+            <div class="hf hf--logo is-visible no-transition">
+                <div class="logo">
+                    <a href="/" style="text-decoration:none;">
+                        <svg class="logo-svg" viewBox="0 0 280 64" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="grad-amstrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%"   stop-color="#FFFFFF"/>
+                                    <stop offset="40%"  stop-color="#FFFFFF"/>
+                                    <stop offset="40%"  stop-color="#AA1111"/>
+                                    <stop offset="60%"  stop-color="#AA1111"/>
+                                    <stop offset="60%"  stop-color="#FFFFFF"/>
+                                    <stop offset="100%" stop-color="#FFFFFF"/>
+                                </linearGradient>
+                                <linearGradient id="grad-atari" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%"   stop-color="#FF0000"/>
+                                    <stop offset="40%"  stop-color="#FFEE00"/>
+                                    <stop offset="100%" stop-color="#00CCFF"/>
+                                </linearGradient>
+                                <linearGradient id="grad-amiga" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%"   stop-color="#0033CC"/>
+                                    <stop offset="20%"  stop-color="#00AAFF"/>
+                                    <stop offset="40%"  stop-color="#00DD44"/>
+                                    <stop offset="60%"  stop-color="#FFEE00"/>
+                                    <stop offset="80%"  stop-color="#FF6600"/>
+                                    <stop offset="100%" stop-color="#EE1111"/>
+                                </linearGradient>
+                            </defs>
+                            <text class="logo-t-amstrad" x="10"  y="46">A</text>
+                            <text class="logo-t-rest"    x="44"  y="48">mst</text>
+                            <text class="logo-t-atari"   x="86"  y="52">A</text>
+                            <text class="logo-t-rest"    x="124" y="52">rig</text>
+                            <text class="logo-t-amiga"   x="172" y="56">A</text>
+                        </svg>
+                    </a>
+                </div>
+                <a href="/" class="back-btn back-btn--inline">
+                    <span class="back-arrow">←</span>
+                    <span class="back-lbl">INDEX</span>
+                </a>
+            </div>
+
+            <div class="hf hf--mid is-visible no-transition"></div>
+
+            <div class="hf hf--actions is-visible no-transition">
+                <div class="header-actions">
+                    <a href="/" class="back-btn back-btn--desktop">
+                        <span class="back-arrow">←</span>
+                        <span class="back-lbl">INDEX</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="hf-crack hf-crack--1 is-visible no-transition"></div>
+            <div class="hf-crack hf-crack--2 is-visible no-transition"></div>
+        </header>
+
+        <slot />
+    </body>
+</html>

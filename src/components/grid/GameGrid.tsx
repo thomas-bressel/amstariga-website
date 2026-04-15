@@ -86,8 +86,9 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     const [view, setView]           = useState<'grid' | 'cover'>('cover');
 
     useEffect(() => {
-        document.body.style.overflow = view === 'cover' ? 'hidden' : '';
-        return () => { document.body.style.overflow = ''; };
+        document.body.style.overflowY = view === 'cover' ? 'hidden' : '';
+        document.body.style.overflowX = '';
+        return () => { document.body.style.overflowY = ''; };
     }, [view]);
 
     const sentinelRef = useRef<HTMLDivElement>(null);
