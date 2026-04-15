@@ -7,19 +7,31 @@ import './GameGrid.css';
 /** Number of games fetched per infinite-scroll batch. */
 const BATCH_SIZE = 50;
 
-/** Emoji icon for each game category, keyed by category name. */
+/**
+ * Emoji icon for each game category, keyed by the exact category name stored
+ * in the database. Only gameplay categories (mixed-case) are listed here —
+ * meta-categories (JEU, DEMO, UTILITAIRE, COMPILATION…) are intentionally
+ * excluded from the filter bar.
+ */
 const CAT_ICONS: Record<string, string> = {
-    'Action':       '⚔️',
-    'Aventure':     '🗺️',
-    'Plateforme':   '🏃',
-    'Puzzle':       '🧩',
-    'Course':       '🏎️',
-    'Sport':        '⚽',
-    'RPG':          '🐉',
-    'Simulation':   '✈️',
-    'Tir':          '🔫',
-    'Arcade':       '🕹️',
-    'default':      '🎮',
+    'Action':           '⚔️',
+    'Aventure':         '🗺️',
+    'Casse-Briques':    '🧱',
+    'Combat':           '🥊',
+    'Course':           '🏎️',
+    'Jeu de Café':      '🕹️',
+    'Jeu de Rôle':      '🐉',
+    'Labyrinthe':       '🌀',
+    'Plates-Formes':    '🏃',
+    'Quiz':             '❓',
+    'Réflexion':        '🧩',
+    'Run & Gun':        '🔫',
+    "Shoot'Em Up":      '🚀',
+    'Simulation':       '✈️',
+    'Sport':            '⚽',
+    'Stratégie':        '♟️',
+    'Tir sur Cibles':   '🎯',
+    'default':          '🎮',
 };
 
 /** Release years available in the year filter (1982–1999). */
