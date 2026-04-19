@@ -10,7 +10,7 @@
     width: 100%;
     z-index: 1000;
     pointer-events: none;
-    height: 100px;
+    height: 64px;
 }
 
 /* Conteneur legacy neutralisé */
@@ -36,13 +36,15 @@
 /* Fragment 1 — logo, gauche, arrive du haut */
 .hf--logo {
     top: 0; left: 0;
-    width: 55%;
-    height: 90px;
+    width: 100%;
+    height: 100px;
     background: rgba(30, 26, 22, 0.92);
-    clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
     display: flex;
     align-items: center;
-    padding-left: 1.8rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    justify-content: space-between;
     opacity: 0;
     transform: translateY(-120px) skewX(-8deg);
     z-index: 3;
@@ -50,35 +52,12 @@
 
 /* Fragment 2 — bande centrale décorative, arrive de la droite */
 .hf--mid {
-    top: 0;
-    left: 48%;
-    width: 28%;
-    height: 72px;
-    background: rgba(20, 18, 16, 0.65);
-    clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
-    opacity: 0;
-    transform: translateX(120vw) skewX(6deg);
-    pointer-events: none;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: none;
 }
 
 /* Fragment 3 — actions, droite, arrive du haut */
 .hf--actions {
-    top: 0; right: 0;
-    width: 32%;
-    height: 80px;
-    background: rgba(26, 22, 20, 0.88);
-    clip-path: polygon(6% 0, 100% 0, 100% 100%, 0 100%);
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding-right: 1.5rem;
-    opacity: 0;
-    transform: translateY(-120px) skewX(12deg) rotate(2deg);
-    z-index: 2;
+    display: none;
 }
 
 /* ── ANIMATIONS D'APPARITION ── */
@@ -86,7 +65,6 @@
 .hf--mid.is-visible     { animation: frag-right     1.0s  cubic-bezier(0.22,1,0.36,1) both; }
 .hf--actions.is-visible { animation: frag-top-right 0.85s cubic-bezier(0.22,1,0.36,1) both; }
 .hf-crack.is-visible    { animation: crack-appear   1.0s  ease both; }
-.filter-chip-bar.is-visible { animation: chipbar-in 0.6s  cubic-bezier(0.22,1,0.36,1) both; }
 
 @keyframes frag-top-left {
     0%   { transform: translateY(-120px) skewX(-8deg); opacity: 0; }
@@ -114,38 +92,12 @@
 
 /* ── FISSURES — traits lumineux aux jointures ── */
 .hf-crack {
-    position: absolute;
-    top: 0;
-    height: 100px;
-    width: 2px;
-    pointer-events: none;
-    opacity: 0;
+    display: none;
 }
 
-.hf-crack--1 {
-    left: calc(55% - 12%);
-    background: linear-gradient(180deg,
-        transparent 0%,
-        rgba(158,212,178,0.9) 20%,
-        rgba(255,255,255,0.6) 50%,
-        rgba(158,212,178,0.4) 80%,
-        transparent 100%
-    );
-    transform: rotate(3deg);
-    filter: blur(0.5px);
-}
-
+.hf-crack--1,
 .hf-crack--2 {
-    left: calc(76%);
-    background: linear-gradient(180deg,
-        transparent 0%,
-        rgba(200,185,160,0.8) 15%,
-        rgba(255,255,255,0.5) 55%,
-        rgba(200,185,160,0.3) 85%,
-        transparent 100%
-    );
-    transform: rotate(-2deg);
-    filter: blur(0.5px);
+    display: none;
 }
 
 @keyframes crack-appear {
@@ -209,6 +161,50 @@
     transform: skewX(11deg) translateY(4px);
     transform-origin: bottom right;
     transform-box: fill-box;
+}
+
+/* ── BOUTON FILTRES ── */
+.filter-header-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--border-hi);
+    color: var(--text-dim);
+    padding: 5px 12px;
+    cursor: pointer;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.68rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: border-color 0.15s, color 0.15s;
+    position: relative;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+
+.filter-header-btn:hover,
+.filter-header-btn.has-active {
+    border-color: var(--green);
+    color: var(--green);
+}
+
+.filter-header-lbl { white-space: nowrap; }
+
+.filter-header-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 3px;
+    background: var(--red);
+    color: #fff;
+    font-size: 0.55rem;
+    font-weight: bold;
+    font-family: monospace;
+    align-items: center;
+    justify-content: center;
 }
 
 /* ── ACTIONS ── */
@@ -328,25 +324,91 @@
     box-shadow: 0 0 6px var(--green);
 }
 
-/* ── RESPONSIVE ── */
-@media (max-width: 768px) {
-    .main-header { height: 64px; }
+.main-layout { padding-top: 80px; }
+
+/* ── DESKTOP ── */
+@media (min-width: 769px) {
+    .main-header { height: 100px; }
 
     .hf--logo {
-        width: 100%;
-        height: 100px;
-        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
-        padding-left: 1rem;
-        padding-right: 1rem;
-        justify-content: space-between;
-        align-items: center;
+        width: 55%;
+        height: 90px;
+        clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%);
+        padding-left: 1.8rem;
+        padding-right: 0;
+        justify-content: flex-start;
     }
 
-    .hf--mid     { display: none; }
-    .hf--actions { display: none; }
-    .hf-crack    { display: none; }
+    .hf--mid {
+        display: flex;
+        top: 0;
+        left: 48%;
+        width: 28%;
+        height: 72px;
+        background: rgba(20, 18, 16, 0.65);
+        clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
+        opacity: 0;
+        transform: translateX(120vw) skewX(6deg);
+        pointer-events: none;
+        z-index: 1;
+        align-items: center;
+        justify-content: center;
+    }
 
-    .detail-page .hf--logo { display: flex; justify-content: flex-end; }
+    .hf--actions {
+        display: flex;
+        top: 0; right: 0;
+        width: 32%;
+        height: 80px;
+        background: rgba(26, 22, 20, 0.88);
+        clip-path: polygon(6% 0, 100% 0, 100% 100%, 0 100%);
+        align-items: center;
+        justify-content: flex-end;
+        padding-right: 1.5rem;
+        opacity: 0;
+        transform: translateY(-120px) skewX(12deg) rotate(2deg);
+        z-index: 2;
+    }
 
-    .main-layout { padding-top: 80px; }
+    .hf-crack {
+        display: block;
+        position: absolute;
+        top: 0;
+        height: 100px;
+        width: 2px;
+        pointer-events: none;
+        opacity: 0;
+    }
+
+    .hf-crack--1 {
+        display: block;
+        left: calc(55% - 12%);
+        background: linear-gradient(180deg,
+            transparent 0%,
+            rgba(158,212,178,0.9) 20%,
+            rgba(255,255,255,0.6) 50%,
+            rgba(158,212,178,0.4) 80%,
+            transparent 100%
+        );
+        transform: rotate(3deg);
+        filter: blur(0.5px);
+    }
+
+    .hf-crack--2 {
+        display: block;
+        left: calc(76%);
+        background: linear-gradient(180deg,
+            transparent 0%,
+            rgba(200,185,160,0.8) 15%,
+            rgba(255,255,255,0.5) 55%,
+            rgba(200,185,160,0.3) 85%,
+            transparent 100%
+        );
+        transform: rotate(-2deg);
+        filter: blur(0.5px);
+    }
+
+    .detail-page .hf--logo { justify-content: flex-start; }
+
+    .main-layout { padding-top: 110px; }
 }

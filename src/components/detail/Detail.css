@@ -26,9 +26,9 @@
 .game-hero {
     position: relative;
     margin-top: 8rem;
-    padding: 3rem 4rem 2.5rem;
+    padding: 1.5rem;
     background: var(--surface);
-    clip-path: polygon(0 0, 100% 0, 100% 78%, 96% 100%, 0 100%);
+    clip-path: none;
     display: flex;
     align-items: flex-start;
     gap: 2.5rem;
@@ -70,14 +70,14 @@
 
 .game-hero-cover {
     flex-shrink: 0;
-    width: 140px;
-    height: 140px;
+    width: 90px;
+    height: 90px;
     background: var(--surface2);
     border: 2px solid var(--border-hi);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 3.5rem;
+    font-size: 2.2rem;
     clip-path: polygon(0 0, 94% 0, 100% 6%, 100% 100%, 6% 100%, 0 94%);
 }
 
@@ -96,7 +96,7 @@
 }
 
 .hero-title {
-    font-size: clamp(1.6rem, 4vw, 3rem);
+    font-size: 1.4rem;
     font-weight: 900;
     color: var(--text);
     margin: 0 0 0.3rem;
@@ -141,7 +141,7 @@
    ============================================================ */
 .bento-puzzle {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     grid-auto-rows: minmax(170px, auto);
     gap: 4px;
     padding: 4px 20px 20px;
@@ -385,7 +385,7 @@
 
 .modal-two-col {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 2rem;
 }
 
@@ -473,27 +473,27 @@
     border-color: var(--accent);
 }
 
-.back-btn--inline  { display: none; }
-
-@media (max-width: 768px) {
-    .back-btn--inline  { display: flex; }
-    .back-btn--desktop { display: none; }
-}
+.back-btn--inline  { display: flex; }
+.back-btn--desktop { display: none; }
 
 .back-arrow { font-size: 1rem; }
 
 /* ============================================================
-   RESPONSIVE
+   RESPONSIVE — mobile-first
    ============================================================ */
-@media (max-width: 900px) {
+@media (min-width: 601px) {
+    .game-hero        { padding: 3rem 4rem 2.5rem; clip-path: polygon(0 0, 100% 0, 100% 78%, 96% 100%, 0 100%); }
+    .game-hero-cover  { width: 140px; height: 140px; font-size: 3.5rem; }
+    .hero-title       { font-size: clamp(1.6rem, 4vw, 3rem); }
+    .modal-two-col    { grid-template-columns: 1fr 1fr; }
+    .back-btn--inline  { display: none; }
+    .back-btn--desktop { display: flex; }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
     .bento-puzzle { grid-template-columns: repeat(3, 1fr); }
 }
 
-@media (max-width: 600px) {
-    .bento-puzzle { grid-template-columns: repeat(2, 1fr); }
-    .span-2       { grid-column: span 2; }
-    .game-hero    { padding: 1.5rem; clip-path: none; }
-    .game-hero-cover { width: 90px; height: 90px; font-size: 2.2rem; }
-    .hero-title   { font-size: 1.4rem; }
-    .modal-two-col { grid-template-columns: 1fr; }
+@media (min-width: 901px) {
+    .bento-puzzle { grid-template-columns: repeat(4, 1fr); }
 }

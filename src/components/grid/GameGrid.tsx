@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchGames, fetchGamesCount } from '../../share/models/games';
+import { fetchAvailableYears, fetchGames, fetchGamesCount } from '../../share/models/games';
 import type { GameFilters, GameListItem } from '../../share/types/game';
 import { thumbnailPath } from '../../share/utils/thumbnail';
 import Carousel from '../carousel/Carousel';
@@ -24,43 +24,78 @@ function loadFilters(): GameFilters | null {
         const f = JSON.parse(raw) as GameFilters;
         if (!f || typeof f !== 'object') return null;
         return {
-            search:     typeof f.search === 'string' ? f.search : '',
-            categories: Array.isArray(f.categories) ? f.categories : [],
-            years:      Array.isArray(f.years) ? f.years.map(Number).filter(Boolean) : [],
+            search:            typeof f.search === 'string' ? f.search : '',
+            parent_categories: Array.isArray(f.parent_categories) ? f.parent_categories : [],
+            child_categories:  Array.isArray(f.child_categories)  ? f.child_categories  : [],
+            years:             Array.isArray(f.years) ? f.years.map(Number).filter(Boolean) : [],
         };
     } catch { return null; }
 }
 
-/**
- * Emoji icon for each game category, keyed by the exact category name stored
- * in the database. Only gameplay categories (mixed-case) are listed here —
- * meta-categories (JEU, DEMO, UTILITAIRE, COMPILATION…) are intentionally
- * excluded from the filter bar.
- */
-const CAT_ICONS: Record<string, string> = {
-    'Action':           '⚔️',
-    'Aventure':         '🗺️',
-    'Casse-Briques':    '🧱',
-    'Combat':           '🥊',
-    'Course':           '🏎️',
-    'Jeu de Café':      '🕹️',
-    'Jeu de Rôle':      '🐉',
-    'Labyrinthe':       '🌀',
-    'Plates-Formes':    '🏃',
-    'Quiz':             '❓',
-    'Réflexion':        '🧩',
-    'Run & Gun':        '🔫',
-    "Shoot'Em Up":      '🚀',
-    'Simulation':       '✈️',
-    'Sport':            '⚽',
-    'Stratégie':        '♟️',
-    'Tir sur Cibles':   '🎯',
-    'default':          '🎮',
+
+const PARENT_CATS: { name: string; icon: string }[] = [
+    { name: 'JEU',            icon: '🎮' },
+    { name: 'DEMO',           icon: '💿' },
+    { name: 'COMPILATION',    icon: '📦' },
+    { name: 'UTILITAIRE',     icon: '🔧' },
+    { name: 'EDUCATIF',       icon: '📚' },
+    { name: 'DIVERS',         icon: '🗂️' },
+];
+
+const CHILD_CATS: Record<string, { name: string; icon: string }[]> = {
+    'JEU': [
+        { name: 'Action',         icon: '⚔️' },
+        { name: 'Réflexion',      icon: '🧩' },
+        { name: 'Aventure',       icon: '🗺️' },
+        { name: 'Plates-Formes',  icon: '🏃' },
+        { name: "Shoot'Em Up",    icon: '🚀' },
+        { name: 'Labyrinthe',     icon: '🌀' },
+        { name: 'Sport',          icon: '⚽' },
+        { name: 'Run & Gun',      icon: '🔫' },
+        { name: 'Jeu de Café',    icon: '🕹️' },
+        { name: 'Course',         icon: '🏎️' },
+        { name: 'Simulation',     icon: '✈️' },
+        { name: 'Combat',         icon: '🥊' },
+        { name: 'Stratégie',      icon: '♟️' },
+        { name: 'Casse-Briques',  icon: '🧱' },
+        { name: 'Quiz',           icon: '❓' },
+        { name: 'Tir sur Cibles', icon: '🎯' },
+        { name: 'Gestion',        icon: '📊' },
+        { name: 'Jeu de Rôle',    icon: '🐉' },
+    ],
+    'DEMO': [
+        { name: 'Divers',     icon: '🗂️' },
+        { name: 'Graphisme',  icon: '🎨' },
+        { name: 'Son',        icon: '🎵' },
+    ],
+    'UTILITAIRE': [
+        { name: 'Divers',                              icon: '🗂️' },
+        { name: 'Outils pour disquettes et cassettes', icon: '💾' },
+        { name: 'Graphisme',                           icon: '🎨' },
+        { name: 'Base de donnees',                     icon: '🗄️' },
+        { name: 'Son',                                 icon: '🎵' },
+        { name: 'Bureautique et communication',        icon: '📠' },
+    ],
+    'EDUCATIF': [
+        { name: 'Cours, Tutoriaux',          icon: '📖' },
+        { name: 'Divers',                    icon: '🗂️' },
+        { name: 'Maths, Geometrie',          icon: '📐' },
+        { name: 'Orthographe, Grammaire',    icon: '✏️' },
+        { name: 'Histoire, Geographie',      icon: '🌍' },
+    ],
+    'DIVERS': [
+        { name: 'DiscMag',        icon: '📰' },
+        { name: 'CrackTro',       icon: '💥' },
+        { name: 'Trainer',        icon: '🛠️' },
+        { name: 'Prevision',      icon: '🔮' },
+        { name: 'JAMAIS SORTI ?', icon: '❌' },
+    ],
+    'COMPILATION': [],
 };
 
-/** Release years available in the year filter (1982–1999). */
-const YEARS: number[] = [];
-for (let y = 1982; y <= 1999; y++) YEARS.push(y);
+
+const PARENT_NAMES  = new Set(PARENT_CATS.map(p => p.name));
+const ALL_CHILD_NAMES = new Set(Object.values(CHILD_CATS).flat().map(c => c.name));
 
 // ---------------------------------------------------------------------------
 // Props
@@ -102,10 +137,18 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     useEffect(() => {
         window.dispatchEvent(new CustomEvent('retro:count-update', { detail: { count: total } }));
     }, [total]);
+
+    // Écoute le bouton FILTRES dans le header
+    useEffect(() => {
+        const handler = () => setSheetOpen(true);
+        window.addEventListener('retro:open-filters', handler);
+        return () => window.removeEventListener('retro:open-filters', handler);
+    }, []);
     const [offset, setOffset]       = useState(initialGames.length);
     const [hasMore, setHasMore]     = useState(initialGames.length === BATCH_SIZE);
     const [isLoading, setIsLoading] = useState(false);
-    const [filters, setFilters]     = useState<GameFilters>(() => loadFilters() ?? { categories: [], years: [] });
+    const [filters, setFilters]     = useState<GameFilters>(() => loadFilters() ?? { parent_categories: [], child_categories: [], years: [] });
+    const [availableYears, setAvailableYears] = useState<number[]>([]);
     const [sheetOpen, setSheetOpen] = useState(false);
     const [view, setView]           = useState<'grid' | 'cover'>(() => {
         try { return (localStorage.getItem('amstariga_view') as 'grid' | 'cover') || 'cover'; } catch { return 'cover'; }
@@ -153,18 +196,44 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     filtersRef.current = filters;
     offsetRef.current  = offset;
 
-    // On mount — show chip bar for returning visitors + refetch if saved filters exist
+    // On mount — écoute le signal de boot ou affiche immédiatement pour les visiteurs de retour
     useEffect(() => {
-        const chipbar = document.querySelector('.filter-chip-bar');
-        if (chipbar && localStorage.getItem('amstariga_visited')) {
-            chipbar.classList.add('is-visible', 'no-transition');
-        }
+        const el = stickyRef.current;
+        if (!el) return;
 
+        if (localStorage.getItem('amstariga_visited')) {
+            el.classList.add('is-visible', 'no-transition');
+        } else {
+            const handler = () => el.classList.add('is-visible');
+            window.addEventListener('retro:chipbar-show', handler, { once: true });
+            return () => window.removeEventListener('retro:chipbar-show', handler);
+        }
+    }, []);
+
+    // Recharge les années disponibles quand les catégories ou is_adult changent
+    // et purge les années sélectionnées qui ne sont plus dans la liste
+    useEffect(() => {
+        fetchAvailableYears({
+            parent_categories: filters.parent_categories,
+            child_categories:  filters.child_categories,
+            is_adult:          filters.is_adult,
+        }).then(years => {
+            setAvailableYears(years);
+            const validSet = new Set(years);
+            const invalidYears = (filters.years ?? []).filter(y => !validSet.has(y));
+            if (invalidYears.length > 0) {
+                const cleaned = (filters.years ?? []).filter(y => validSet.has(y));
+                applyFilters({ ...filters, years: cleaned });
+            }
+        }).catch(() => {});
+    }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), filters.is_adult]);
+
+    // On mount — refetch si des filtres sauvegardés sont actifs
+    useEffect(() => {
         const saved = loadFilters();
         if (!saved) return;
         const hasActive = (saved.categories?.length ?? 0) + (saved.years?.length ?? 0) + (saved.search ? 1 : 0) > 0;
         if (!hasActive) return;
-        // Filters already set in useState initializer — just refetch with them
         setIsLoading(true);
         Promise.all([
             fetchGames(saved, BATCH_SIZE, 0),
@@ -254,9 +323,33 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
      * @param cat - Category name to add or remove.
      */
     function toggleCategory(cat: string) {
-        const cats = filters.categories ?? [];
-        const next = cats.includes(cat) ? cats.filter(c => c !== cat) : [...cats, cat];
-        applyFilters({ ...filters, categories: next });
+        const parents  = filters.parent_categories ?? [];
+        const children = filters.child_categories  ?? [];
+
+        if (PARENT_NAMES.has(cat)) {
+            if (parents.includes(cat)) {
+                // Déselection d'un type : retirer le type ET ses genres enfants
+                const itsChildren = new Set((CHILD_CATS[cat] ?? []).map(c => c.name));
+                applyFilters({
+                    ...filters,
+                    parent_categories: parents.filter(p => p !== cat),
+                    child_categories:  children.filter(c => !itsChildren.has(c)),
+                });
+            } else {
+                // Sélection d'un nouveau type : purger les genres qui n'appartiennent plus aux types restants
+                const nextParents     = [...parents, cat];
+                const allowedChildren = new Set(nextParents.flatMap(p => (CHILD_CATS[p] ?? []).map(c => c.name)));
+                applyFilters({
+                    ...filters,
+                    parent_categories: nextParents,
+                    child_categories:  children.filter(c => allowedChildren.has(c)),
+                });
+            }
+        } else {
+            // Genre enfant — toggle simple
+            const next = children.includes(cat) ? children.filter(c => c !== cat) : [...children, cat];
+            applyFilters({ ...filters, child_categories: next });
+        }
     }
 
     /**
@@ -273,7 +366,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     /** Clears all active filters and reloads the full game list. */
     function resetFilters() {
         try { localStorage.removeItem(LS_KEY); } catch {}
-        applyFilters({ categories: [], years: [] });
+        applyFilters({ parent_categories: [], child_categories: [], years: [] });
     }
 
     function toggleAdult() {
@@ -281,7 +374,37 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     }
 
     /** Total number of active filter criteria (used for the badge counter). */
-    const activeCount = (filters.categories?.length ?? 0) + (filters.years?.length ?? 0) + (filters.is_adult !== undefined ? 1 : 0);
+    const activeCount =
+        (filters.parent_categories?.length ?? 0) +
+        (filters.child_categories?.length  ?? 0) +
+        (filters.years?.length             ?? 0) +
+        (filters.is_adult !== undefined ? 1 : 0);
+
+    useEffect(() => {
+        window.dispatchEvent(new CustomEvent('retro:filter-count', { detail: { count: activeCount } }));
+    }, [activeCount]);
+
+    const selectedParents = filters.parent_categories ?? [];
+    const baseGenres = selectedParents.length > 0
+        ? selectedParents.flatMap(p => CHILD_CATS[p] ?? [])
+        : Object.values(CHILD_CATS).flat();
+    // Toujours afficher les genres déjà sélectionnés même s'ils ne sont plus dans la liste de base
+    const selectedChildNames = new Set(filters.child_categories ?? []);
+    const extraGenres = Object.values(CHILD_CATS).flat().filter(
+        g => selectedChildNames.has(g.name) && !baseGenres.some(b => b.name === g.name)
+    );
+    // Dédupliquer par nom.
+    // Si aucun parent n'est sélectionné, masquer les genres homonymes d'un parent
+    // (ex: "Divers" enfant serait ambigu avec "DIVERS" type — on ne l'affiche qu'une fois un parent choisi)
+    const parentNamesLower = new Set(PARENT_CATS.map(p => p.name.toLowerCase()));
+    const noParentSelected = selectedParents.length === 0;
+    const seen = new Set<string>();
+    const visibleGenres = [...baseGenres, ...extraGenres].filter(g => {
+        if (seen.has(g.name)) return false;
+        if (noParentSelected && parentNamesLower.has(g.name.toLowerCase())) return false;
+        seen.add(g.name);
+        return true;
+    });
 
     // ------------------------------------------------------------------
     // Render
@@ -298,13 +421,13 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                     >
                         ✦ TOUS
                     </button>
-                    {Object.keys(CAT_ICONS).filter(k => k !== 'default').sort().map(cat => (
+                    {PARENT_CATS.map(({ name, icon }) => (
                         <button
-                            key={cat}
-                            className={`fchip ${filters.categories?.includes(cat) ? 'fchip-active' : ''}`}
-                            onClick={() => toggleCategory(cat)}
+                            key={name}
+                            className={`fchip ${filters.parent_categories?.includes(name) ? 'fchip-active' : ''}`}
+                            onClick={() => toggleCategory(name)}
                         >
-                            {CAT_ICONS[cat]} {cat.toUpperCase()}
+                            {icon} {name}
                         </button>
                     ))}
                     <button
@@ -318,7 +441,12 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                 {/* ── Active filters strip ── */}
                 {activeCount > 0 && (
                     <div className="active-filters-strip has-tags">
-                        {filters.categories?.map(cat => (
+                        {filters.parent_categories?.map(cat => (
+                            <span key={cat} className="atag" onClick={() => toggleCategory(cat)}>
+                                {cat} <span className="atag-x">&times;</span>
+                            </span>
+                        ))}
+                        {filters.child_categories?.map(cat => (
                             <span key={cat} className="atag" onClick={() => toggleCategory(cat)}>
                                 {cat} <span className="atag-x">&times;</span>
                             </span>
@@ -339,6 +467,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                 {/* ── Search bar ── */}
                 <SearchBar
                     value={filters.search ?? ''}
+                    filters={filters}
                     onChange={val => setFilters(f => ({ ...f, search: val }))}
                     onSubmit={val => applyFilters({ ...filters, search: val })}
                 />
@@ -347,16 +476,6 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
             {/* Spacer pour éviter que le contenu passe sous le sticky */}
             <div style={{ height: stickyH }} />
 
-            <button
-                className={`filter-fab ${activeCount > 0 ? 'has-active' : ''}`}
-                onClick={() => setSheetOpen(true)}
-                aria-label="Ouvrir les filtres avancés"
-                style={{ zIndex: 900 }}
-            >
-                <span className="fab-ico">⚙</span>
-                <span className="fab-lbl">FILTRES</span>
-                {activeCount > 0 && <span className="fab-badge show">{activeCount}</span>}
-            </button>
 
             {/* ── Carousel ou Grille ── */}
             {view === 'cover' ? (
@@ -405,31 +524,59 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                             <button className="sheet-reset" onClick={resetFilters}>TOUT EFFACER</button>
                         </div>
                         <div className="sheet-body">
-                            <div className="sheet-section-lbl">📂 Catégorie</div>
+                            <div className="sheet-section-lbl">🗃️ Type</div>
                             <div className="cat-grid">
-                                {Object.keys(CAT_ICONS).filter(k => k !== 'default').sort().map(cat => (
+                                {PARENT_CATS.map(({ name, icon }) => (
                                     <button
-                                        key={cat}
-                                        className={`cat-btn ${filters.categories?.includes(cat) ? 'active' : ''}`}
-                                        onClick={() => toggleCategory(cat)}
+                                        key={name}
+                                        className={`cat-btn ${filters.parent_categories?.includes(name) ? 'active' : ''}`}
+                                        onClick={() => toggleCategory(name)}
                                     >
-                                        <span className="cat-ico">{CAT_ICONS[cat]}</span>
-                                        {cat.toUpperCase()}
+                                        <span className="cat-ico">{icon}</span>
+                                        {name}
                                     </button>
                                 ))}
+                                <button
+                                    className={`cat-btn ${filters.is_adult === true ? 'active' : ''}`}
+                                    onClick={toggleAdult}
+                                >
+                                    <span className="cat-ico">🔞</span>
+                                    ADULT
+                                </button>
                             </div>
-                            <div className="sheet-section-lbl">📅 Année de sortie</div>
-                            <div className="year-grid">
-                                {YEARS.map(y => (
-                                    <button
-                                        key={y}
-                                        className={`year-pill ${filters.years?.includes(y) ? 'active' : ''}`}
-                                        onClick={() => toggleYear(y)}
-                                    >
-                                        {y}
-                                    </button>
-                                ))}
-                            </div>
+                            {visibleGenres.length > 0 && (
+                                <>
+                                    <div className="sheet-section-lbl">📂 Genre</div>
+                                    <div className="cat-grid">
+                                        {visibleGenres.map(({ name, icon }) => (
+                                            <button
+                                                key={name}
+                                                className={`cat-btn ${filters.child_categories?.includes(name) ? 'active' : ''}`}
+                                                onClick={() => toggleCategory(name)}
+                                            >
+                                                <span className="cat-ico">{icon}</span>
+                                                {name.toUpperCase()}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                            {availableYears.length > 0 && (
+                                <>
+                                    <div className="sheet-section-lbl">📅 Année de sortie</div>
+                                    <div className="year-grid">
+                                        {availableYears.map(y => (
+                                            <button
+                                                key={y}
+                                                className={`year-pill ${filters.years?.includes(y) ? 'active' : ''}`}
+                                                onClick={() => toggleYear(y)}
+                                            >
+                                                {y}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
                         </div>
                         <div className="sheet-footer">
                             <button className="apply-btn" onClick={() => setSheetOpen(false)}>

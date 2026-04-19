@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchSuggestions } from '../../share/models/games';
+import type { GameFilters } from '../../share/types/game';
 import './SearchBar.css';
 
 interface Props {
     value: string;
+    filters: GameFilters;
     onChange: (value: string) => void;
     onSubmit: (value: string) => void;
 }
@@ -11,7 +13,7 @@ interface Props {
 const MIN_CHARS = 2;
 const DEBOUNCE_MS = 180;
 
-export default function SearchBar({ value, onChange, onSubmit }: Props) {
+export default function SearchBar({ value, filters, onChange, onSubmit }: Props) {
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [open, setOpen]               = useState(false);
     const [activeIdx, setActiveIdx]     = useState(-1);
@@ -27,13 +29,13 @@ export default function SearchBar({ value, onChange, onSubmit }: Props) {
             return;
         }
         timerRef.current = setTimeout(async () => {
-            const results = await fetchSuggestions(value).catch(() => []);
+            const results = await fetchSuggestions(value, filters).catch(() => []);
             setSuggestions(results);
             setOpen(results.length > 0);
             setActiveIdx(-1);
         }, DEBOUNCE_MS);
         return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-    }, [value]);
+    }, [value, filters]);
 
     function submit(term: string) {
         setOpen(false);

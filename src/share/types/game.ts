@@ -2,8 +2,10 @@
 export interface GameFilters {
     /** Free-text search on the game title. */
     search?: string;
-    /** List of category names to include (OR logic). */
-    categories?: string[];
+    /** Catégories parentes (JEU, DEMO, COMPILATION…) — filtre OR. */
+    parent_categories?: string[];
+    /** Catégories enfants (Action, Shoot'Em Up…) — filtre OR, AND avec parent_categories. */
+    child_categories?: string[];
     /** List of release years to include (OR logic). */
     years?: number[];
     /** Filter by adult content: true = only adult, false = exclude adult, undefined = all. */

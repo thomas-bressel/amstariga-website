@@ -246,7 +246,6 @@ import './BootScreen.css';
         var mid     = document.querySelector('.hf--mid');
         var actions = document.querySelector('.hf--actions');
         var cracks  = document.querySelectorAll('.hf-crack');
-        var chipbar = document.querySelector('.filter-chip-bar');
         var BASE    = 2000;
 
         setTimeout(function () { if (logo)    logo.classList.add('is-visible');    impactSound(); }, BASE);
@@ -257,7 +256,7 @@ import './BootScreen.css';
             beep(1200, 'sine', 0.06, 0.15, 0);
         }, BASE + 1800);
         setTimeout(function () {
-            if (chipbar) chipbar.classList.add('is-visible');
+            window.dispatchEvent(new CustomEvent('retro:chipbar-show'));
             beep(180, 'sine', 0.1, 0.12, 0);
         }, BASE + 2200);
         setTimeout(function () {

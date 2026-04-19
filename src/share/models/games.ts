@@ -17,8 +17,12 @@ function buildQS(filters: GameFilters, extra: Record<string, string | number> = 
 
     if (filters.search) params.set('search', filters.search);
 
-    for (const c of filters.categories ?? []) {
-        params.append('categories', c);
+    for (const c of filters.parent_categories ?? []) {
+        params.append('parent_categories', c);
+    }
+
+    for (const c of filters.child_categories ?? []) {
+        params.append('child_categories', c);
     }
 
     for (const y of filters.years ?? []) {
@@ -79,6 +83,12 @@ export function fetchGame(id: number): Promise<Game> {
     return apiFetch<Game>(`/api/games/${id}`);
 }
 
-export function fetchSuggestions(prefix: string): Promise<string[]> {
-    return apiFetch<string[]>(`/api/games/suggest?q=${encodeURIComponent(prefix)}`);
+export function fetchAvailableYears(filters: GameFilters = {}): Promise<number[]> {
+    const qs = buildQS(filters);
+    return apiFetch<number[]>(`/api/games/years${qs ? `?${qs}` : ''}`);
+}
+
+export function fetchSuggestions(prefix: string, filters: GameFilters = {}): Promise<string[]> {
+    const qs = buildQS(filters, { q: prefix });
+    return apiFetch<string[]>(`/api/games/suggest?${qs}`);
 }

@@ -36,8 +36,8 @@
 }
 
 .search-input::placeholder {
-    color: var(--fg);
-    opacity: 0.3;
+    color: var(--text-dim);
+    opacity: 0.8;
 }
 
 .search-clear {

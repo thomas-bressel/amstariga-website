@@ -49,6 +49,15 @@ import './TapeCounter.css';
   <!-- FRAGMENT 3 : actions -->
   <div class="hf hf--actions ">
     <div class="header-actions">
+      <button class="filter-header-btn" id="filter-header-btn" title="Filtres">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="4" y1="6" x2="20" y2="6"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+          <line x1="11" y1="18" x2="13" y2="18"></line>
+        </svg>
+        <span class="filter-header-lbl">FILTRES</span>
+        <span class="filter-header-badge" id="filter-header-badge" style="display:none"></span>
+      </button>
       <div class="view-toggle">
         <button class="view-btn" data-view="grid">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -91,6 +100,24 @@ import './TapeCounter.css';
       b.classList.toggle('active', b.dataset.view === saved);
     });
   })();
+
+  var filterBtn   = document.getElementById('filter-header-btn');
+  var filterBadge = document.getElementById('filter-header-badge');
+  if (filterBtn) {
+    filterBtn.addEventListener('click', function () {
+      window.dispatchEvent(new CustomEvent('retro:open-filters'));
+    });
+  }
+  window.addEventListener('retro:filter-count', function (e) {
+    var count = e.detail.count;
+    if (filterBadge) {
+      filterBadge.textContent = count;
+      filterBadge.style.display = count > 0 ? 'flex' : 'none';
+    }
+    if (filterBtn) {
+      filterBtn.classList.toggle('has-active', count > 0);
+    }
+  });
 
   document.querySelectorAll('.view-btn[data-view]').forEach(function (btn) {
     btn.addEventListener('click', function () {
