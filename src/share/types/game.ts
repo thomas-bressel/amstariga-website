@@ -6,6 +6,8 @@ export interface GameFilters {
     categories?: string[];
     /** List of release years to include (OR logic). */
     years?: number[];
+    /** Filter by adult content: true = only adult, false = exclude adult, undefined = all. */
+    is_adult?: boolean;
 }
 
 /** A single game as returned by GET /api/games. */
@@ -16,6 +18,10 @@ export interface GameListItem {
     main_title: string;
     /** Year the game was released. */
     release_year: number;
+    /** Parent category (e.g. "JEU", "COMPILATION"). */
+    category_parent?: string;
+    /** Child category (e.g. "Action", "Plates-Formes"). */
+    category_child?: string;
 }
 
 export interface GameAuthor {
@@ -38,6 +44,12 @@ export interface GameComment {
     content?: string;
 }
 
+export interface CompilationGame {
+    order: number;
+    id:    number;
+    title: string;
+}
+
 /** Full game detail as returned by GET /api/games/:id. */
 export interface Game extends GameListItem {
     alt_title?:    string;
@@ -55,5 +67,6 @@ export interface Game extends GameListItem {
     tips?:         string[];
     bugs?:         string[];
     comments?:     GameComment[];
-    screenshots?:  string[];
+    screenshots?:       string[];
+    compilation_games?: CompilationGame[];
 }

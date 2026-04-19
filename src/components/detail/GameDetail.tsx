@@ -168,93 +168,131 @@ function CompilationModal({ game }: { game: Game }) {
     );
 }
 
-/* ── Modale D7 d'une compilation : liste des fichiers (faces) ── */
+/* ── Modale D7 d'une compilation : par jeu membre (regroupé par n° de face) ── */
 function CompilD7Modal({ game }: { game: Game }) {
     const dumps   = (game.dumps ?? []).filter(d => d.category.startsWith('D7'));
     const command = dumps.find(d => d.loading_command)?.loading_command;
-    // Regrouper par category (D7ORI, D7CRACK…)
-    const groups: Record<string, GameDump[]> = {};
-    for (const d of dumps) {
-        if (!groups[d.category]) groups[d.category] = [];
-        groups[d.category].push(d);
+    const members = game.compilation_games ?? [];
+
+    // Extraire le numéro de face principal : "Face 1A" → 1, "Face 2B" → 2
+    function faceNum(filename: string): number {
+        const m = filename.match(/Face\s+(\d+)/i);
+        return m ? parseInt(m[1]) : 0;
     }
-    return (
-        <>
-            <h2 className="modal-section-title">COMPILATION D7</h2>
-            {command && <p style={{ marginBottom: '1.5rem' }}>COMMANDE : <code>{command}</code></p>}
-            {Object.entries(groups).map(([cat, items]) => (
-                <div key={cat} className="dump-block">
-                    <h3 className="dump-label">{cat}</h3>
-                    {items.map((d, i) => (
-                        <p key={i} style={{ marginBottom: '4px' }}>FILE : {d.file_name}</p>
-                    ))}
-                </div>
-            ))}
-        </>
-    );
-}
 
-/* ── Modale K7 d'une compilation : jeux extraits + liens ── */
-function CompilK7Modal({ game }: { game: Game }) {
-    const dumps   = (game.dumps ?? []).filter(d => d.category.startsWith('K7'));
-    const command = dumps.find(d => d.loading_command)?.loading_command;
-    const titles  = extractK7Games(dumps);
-    const [ids, setIds] = useState<Record<string, number | null>>({});
-
-    useEffect(() => {
-        titles.forEach(async title => {
-            try {
-                const res   = await fetch(`/api/games?search=${encodeURIComponent(title)}&limit=1`);
-                const data  = await res.json() as Array<{ id: number; main_title: string }>;
-                const match = data.find(g => g.main_title.toLowerCase() === title.toLowerCase());
-                setIds(prev => ({ ...prev, [title]: match?.id ?? null }));
-            } catch {
-                setIds(prev => ({ ...prev, [title]: null }));
-            }
-        });
-    }, []);
-
-    // Si pas de titres extractibles, afficher les fichiers bruts
-    if (titles.length === 0) {
-        const groups: Record<string, GameDump[]> = {};
-        for (const d of dumps) {
-            if (!groups[d.category]) groups[d.category] = [];
-            groups[d.category].push(d);
+    // Regrouper les fichiers par numéro de face → membre correspondant (face n = membre n)
+    const byMember: Record<number, GameDump[]> = {};
+    const unmatched: GameDump[] = [];
+    for (const d of dumps) {
+        const n = faceNum(d.file_name);
+        if (n > 0) {
+            if (!byMember[n]) byMember[n] = [];
+            byMember[n].push(d);
+        } else {
+            unmatched.push(d);
         }
+    }
+
+    // Si on a des membres ET des faces numérotées → affichage groupé par jeu
+    if (members.length > 0 && Object.keys(byMember).length > 0) {
         return (
             <>
-                <h2 className="modal-section-title">COMPILATION K7</h2>
+                <h2 className="modal-section-title">COMPILATION D7</h2>
                 {command && <p style={{ marginBottom: '1.5rem' }}>COMMANDE : <code>{command}</code></p>}
-                {Object.entries(groups).map(([cat, items]) => (
-                    <div key={cat} className="dump-block">
-                        <h3 className="dump-label">{cat}</h3>
-                        {items.map((d, i) => (
-                            <p key={i} style={{ marginBottom: '4px' }}>FILE : {d.file_name}</p>
-                        ))}
-                    </div>
+                {members.map((m, i) => {
+                    const faces = byMember[i + 1] ?? [];
+                    return (
+                        <div key={m.id} className="dump-block">
+                            <h3 className="dump-label">
+                                <a href={`/game/${m.id}`} style={{ color: 'var(--accent)', textDecoration: 'none' }}>→ {m.title}</a>
+                            </h3>
+                            {faces.map((d, j) => (
+                                <p key={j} style={{ marginBottom: '4px' }}>FILE : {d.file_name}</p>
+                            ))}
+                        </div>
+                    );
+                })}
+                {unmatched.map((d, i) => (
+                    <p key={i} style={{ marginBottom: '4px' }}>FILE : {d.file_name}</p>
                 ))}
             </>
         );
     }
 
+    // Fallback : liste brute
+    return (
+        <>
+            <h2 className="modal-section-title">COMPILATION D7</h2>
+            {command && <p style={{ marginBottom: '1.5rem' }}>COMMANDE : <code>{command}</code></p>}
+            <div className="dump-block">
+                {dumps.map((d, i) => (
+                    <p key={i} style={{ marginBottom: '4px' }}>FILE : {d.file_name}</p>
+                ))}
+            </div>
+        </>
+    );
+}
+
+/* ── Modale K7 d'une compilation : par jeu membre (regroupé par "(N. Titre)") ── */
+function CompilK7Modal({ game }: { game: Game }) {
+    const dumps   = (game.dumps ?? []).filter(d => d.category.startsWith('K7'));
+    const command = dumps.find(d => d.loading_command)?.loading_command;
+    const members = game.compilation_games ?? [];
+
+    // Extraire le numéro de jeu depuis "(1. Cabal)" ou "(2. Ghostbusters II)" → 1, 2…
+    function gameNum(filename: string): number {
+        const m = filename.match(/\((\d+)\./);
+        return m ? parseInt(m[1]) : 0;
+    }
+
+    // Regrouper les fichiers par numéro de jeu
+    const byMember: Record<number, GameDump[]> = {};
+    const unmatched: GameDump[] = [];
+    for (const d of dumps) {
+        const n = gameNum(d.file_name);
+        if (n > 0) {
+            if (!byMember[n]) byMember[n] = [];
+            byMember[n].push(d);
+        } else {
+            unmatched.push(d);
+        }
+    }
+
+    // Affichage groupé par jeu membre
+    if (members.length > 0 && Object.keys(byMember).length > 0) {
+        return (
+            <>
+                <h2 className="modal-section-title">COMPILATION K7</h2>
+                {command && <p style={{ marginBottom: '1.5rem' }}>COMMANDE : <code>{command}</code></p>}
+                {members.map((m, i) => {
+                    const faces = byMember[i + 1] ?? [];
+                    return (
+                        <div key={m.id} className="dump-block">
+                            <h3 className="dump-label">
+                                <a href={`/game/${m.id}`} style={{ color: 'var(--accent)', textDecoration: 'none' }}>→ {m.title}</a>
+                            </h3>
+                            {faces.map((d, j) => (
+                                <p key={j} style={{ marginBottom: '4px' }}>FILE : {d.file_name}</p>
+                            ))}
+                        </div>
+                    );
+                })}
+                {unmatched.map((d, i) => (
+                    <p key={i} style={{ marginBottom: '4px' }}>FILE : {d.file_name}</p>
+                ))}
+            </>
+        );
+    }
+
+    // Fallback : liste brute
     return (
         <>
             <h2 className="modal-section-title">COMPILATION K7</h2>
             {command && <p style={{ marginBottom: '1.5rem' }}>COMMANDE : <code>{command}</code></p>}
             <div className="dump-block">
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                    {titles.map((title, i) => {
-                        const id = ids[title];
-                        return (
-                            <li key={i} style={{ padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                                {id != null
-                                    ? <a href={`/game/${id}`} style={{ color: 'var(--accent)', textDecoration: 'none' }}>→ {title}</a>
-                                    : <span style={{ color: 'var(--text-dim)' }}>· {title}</span>
-                                }
-                            </li>
-                        );
-                    })}
-                </ul>
+                {dumps.map((d, i) => (
+                    <p key={i} style={{ marginBottom: '4px' }}>FILE : {d.file_name}</p>
+                ))}
             </div>
         </>
     );

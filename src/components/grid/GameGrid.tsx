@@ -1,11 +1,35 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchGames, fetchGamesCount } from '../../share/models/games';
 import type { GameFilters, GameListItem } from '../../share/types/game';
+import { thumbnailPath } from '../../share/utils/thumbnail';
 import Carousel from '../carousel/Carousel';
+import SearchBar from './SearchBar';
 import './GameGrid.css';
 
 /** Number of games fetched per infinite-scroll batch. */
 const BATCH_SIZE = 50;
+
+const LS_KEY      = 'amstariga_filters';
+const LS_SCROLL   = 'amstariga_scroll';
+const LS_CAROUSEL = 'amstariga_carousel_index';
+
+function saveFilters(f: GameFilters) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(f)); } catch {}
+}
+
+function loadFilters(): GameFilters | null {
+    try {
+        const raw = localStorage.getItem(LS_KEY);
+        if (!raw) return null;
+        const f = JSON.parse(raw) as GameFilters;
+        if (!f || typeof f !== 'object') return null;
+        return {
+            search:     typeof f.search === 'string' ? f.search : '',
+            categories: Array.isArray(f.categories) ? f.categories : [],
+            years:      Array.isArray(f.years) ? f.years.map(Number).filter(Boolean) : [],
+        };
+    } catch { return null; }
+}
 
 /**
  * Emoji icon for each game category, keyed by the exact category name stored
@@ -81,31 +105,77 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     const [offset, setOffset]       = useState(initialGames.length);
     const [hasMore, setHasMore]     = useState(initialGames.length === BATCH_SIZE);
     const [isLoading, setIsLoading] = useState(false);
-    const [filters, setFilters]     = useState<GameFilters>({ categories: [], years: [] });
+    const [filters, setFilters]     = useState<GameFilters>(() => loadFilters() ?? { categories: [], years: [] });
     const [sheetOpen, setSheetOpen] = useState(false);
-    const [view, setView]           = useState<'grid' | 'cover'>('cover');
+    const [view, setView]           = useState<'grid' | 'cover'>(() => {
+        try { return (localStorage.getItem('amstariga_view') as 'grid' | 'cover') || 'cover'; } catch { return 'cover'; }
+    });
 
     useEffect(() => {
         document.body.style.overflowY = view === 'cover' ? 'hidden' : '';
         document.body.style.overflowX = '';
+
+        if (view === 'grid') {
+            // Restore grid scroll position after the DOM has painted
+            requestAnimationFrame(() => {
+                const saved = parseInt(localStorage.getItem(LS_SCROLL) ?? '0', 10);
+                if (saved > 0) window.scrollTo({ top: saved, behavior: 'instant' });
+            });
+            // Save scroll position as the user scrolls
+            const onScroll = () => {
+                try { localStorage.setItem(LS_SCROLL, String(Math.round(window.scrollY))); } catch {}
+            };
+            window.addEventListener('scroll', onScroll, { passive: true });
+            return () => {
+                window.removeEventListener('scroll', onScroll);
+                document.body.style.overflowY = '';
+            };
+        }
+
         return () => { document.body.style.overflowY = ''; };
     }, [view]);
 
-    const sentinelRef = useRef<HTMLDivElement>(null);
-    const filtersRef  = useRef<GameFilters>(filters);
-    const offsetRef   = useRef(offset);
+    const sentinelRef   = useRef<HTMLDivElement>(null);
+    const filtersRef    = useRef<GameFilters>(filters);
+    const offsetRef     = useRef(offset);
+    const stickyRef     = useRef<HTMLDivElement>(null);
+    const [stickyH, setStickyH] = useState(0);
+
+    // Measure sticky bar height whenever filters change (it may wrap)
+    useEffect(() => {
+        if (!stickyRef.current) return;
+        const obs = new ResizeObserver(([e]) => setStickyH(e.contentRect.height));
+        obs.observe(stickyRef.current);
+        return () => obs.disconnect();
+    }, []);
 
     // Keep refs in sync so the IntersectionObserver callback sees fresh values.
     filtersRef.current = filters;
     offsetRef.current  = offset;
 
-    // On mount — if returning visitor, show chip bar immediately
+    // On mount — show chip bar for returning visitors + refetch if saved filters exist
     useEffect(() => {
         const chipbar = document.querySelector('.filter-chip-bar');
-        if (!chipbar) return;
-        if (localStorage.getItem('amstariga_visited')) {
+        if (chipbar && localStorage.getItem('amstariga_visited')) {
             chipbar.classList.add('is-visible', 'no-transition');
         }
+
+        const saved = loadFilters();
+        if (!saved) return;
+        const hasActive = (saved.categories?.length ?? 0) + (saved.years?.length ?? 0) + (saved.search ? 1 : 0) > 0;
+        if (!hasActive) return;
+        // Filters already set in useState initializer — just refetch with them
+        setIsLoading(true);
+        Promise.all([
+            fetchGames(saved, BATCH_SIZE, 0),
+            fetchGamesCount(saved),
+        ]).then(([batch, count]) => {
+            const safeBatch = batch ?? [];
+            setGames(safeBatch);
+            setTotal(count);
+            setOffset(safeBatch.length);
+            setHasMore(safeBatch.length === BATCH_SIZE);
+        }).finally(() => setIsLoading(false));
     }, []);
 
     // IntersectionObserver on the sentinel element at the bottom of the list
@@ -125,6 +195,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     useEffect(() => {
         const handler = (e: Event) => {
             const v = (e as CustomEvent<{ view: 'grid' | 'cover' }>).detail.view;
+            try { localStorage.setItem('amstariga_view', v); } catch {}
             setView(v);
         };
         window.addEventListener('retro:view-change', handler);
@@ -160,6 +231,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
      */
     async function applyFilters(next: GameFilters) {
         setFilters(next);
+        saveFilters(next);
         setIsLoading(true);
         try {
             const [batch, count] = await Promise.all([
@@ -200,11 +272,16 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
 
     /** Clears all active filters and reloads the full game list. */
     function resetFilters() {
+        try { localStorage.removeItem(LS_KEY); } catch {}
         applyFilters({ categories: [], years: [] });
     }
 
+    function toggleAdult() {
+        applyFilters({ ...filters, is_adult: filters.is_adult === true ? undefined : true });
+    }
+
     /** Total number of active filter criteria (used for the badge counter). */
-    const activeCount = (filters.categories?.length ?? 0) + (filters.years?.length ?? 0);
+    const activeCount = (filters.categories?.length ?? 0) + (filters.years?.length ?? 0) + (filters.is_adult !== undefined ? 1 : 0);
 
     // ------------------------------------------------------------------
     // Render
@@ -212,40 +289,63 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
 
     return (
         <div>
-            {/* ── Chip bar ── */}
-            <div className="filter-chip-bar">
-                <button
-                    className={`fchip fchip-all ${activeCount === 0 ? 'fchip-active' : ''}`}
-                    onClick={resetFilters}
-                >
-                    ✦ TOUS
-                </button>
-                {Object.keys(CAT_ICONS).filter(k => k !== 'default').sort().map(cat => (
+            {/* ── Sticky wrapper : chip bar + active strip + search ── */}
+            <div className="filters-sticky" ref={stickyRef}>
+                <div className="filter-chip-bar">
                     <button
-                        key={cat}
-                        className={`fchip ${filters.categories?.includes(cat) ? 'fchip-active' : ''}`}
-                        onClick={() => toggleCategory(cat)}
+                        className={`fchip fchip-all ${activeCount === 0 ? 'fchip-active' : ''}`}
+                        onClick={resetFilters}
                     >
-                        {CAT_ICONS[cat]} {cat.toUpperCase()}
+                        ✦ TOUS
                     </button>
-                ))}
+                    {Object.keys(CAT_ICONS).filter(k => k !== 'default').sort().map(cat => (
+                        <button
+                            key={cat}
+                            className={`fchip ${filters.categories?.includes(cat) ? 'fchip-active' : ''}`}
+                            onClick={() => toggleCategory(cat)}
+                        >
+                            {CAT_ICONS[cat]} {cat.toUpperCase()}
+                        </button>
+                    ))}
+                    <button
+                        className={`fchip ${filters.is_adult === true ? 'fchip-active' : ''}`}
+                        onClick={toggleAdult}
+                    >
+                        🔞 ADULT
+                    </button>
+                </div>
+
+                {/* ── Active filters strip ── */}
+                {activeCount > 0 && (
+                    <div className="active-filters-strip has-tags">
+                        {filters.categories?.map(cat => (
+                            <span key={cat} className="atag" onClick={() => toggleCategory(cat)}>
+                                {cat} <span className="atag-x">&times;</span>
+                            </span>
+                        ))}
+                        {filters.years?.map(y => (
+                            <span key={y} className="atag" onClick={() => toggleYear(y)}>
+                                {y} <span className="atag-x">&times;</span>
+                            </span>
+                        ))}
+                        {filters.is_adult === true && (
+                            <span className="atag" onClick={toggleAdult}>
+                                🔞 ADULT <span className="atag-x">&times;</span>
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {/* ── Search bar ── */}
+                <SearchBar
+                    value={filters.search ?? ''}
+                    onChange={val => setFilters(f => ({ ...f, search: val }))}
+                    onSubmit={val => applyFilters({ ...filters, search: val })}
+                />
             </div>
 
-            {/* ── Active filters strip ── */}
-            {activeCount > 0 && (
-                <div className="active-filters-strip has-tags">
-                    {filters.categories?.map(cat => (
-                        <span key={cat} className="atag" onClick={() => toggleCategory(cat)}>
-                            {cat} <span className="atag-x">&times;</span>
-                        </span>
-                    ))}
-                    {filters.years?.map(y => (
-                        <span key={y} className="atag" onClick={() => toggleYear(y)}>
-                            {y} <span className="atag-x">&times;</span>
-                        </span>
-                    ))}
-                </div>
-            )}
+            {/* Spacer pour éviter que le contenu passe sous le sticky */}
+            <div style={{ height: stickyH }} />
 
             <button
                 className={`filter-fab ${activeCount > 0 ? 'has-active' : ''}`}
@@ -260,13 +360,22 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
 
             {/* ── Carousel ou Grille ── */}
             {view === 'cover' ? (
-                <Carousel games={games} />
+                <Carousel
+                    games={games}
+                    initialIndex={(() => { try { return parseInt(localStorage.getItem(LS_CAROUSEL) ?? '0', 10) || 0; } catch { return 0; } })()}
+                    topOffset={stickyH}
+                />
             ) : (
-                <div className="games-container">
+                <div className="games-container" style={{ marginTop: stickyH }}>
                     {games.map(game => (
                         <a key={game.id} className="game-card screenshot-mode" href={`/game/${game.id}`}>
                             <div className="game-screenshot">
-                                <div className="screenshot-placeholder pixel-effect">🎮</div>
+                                <img
+                                    src={thumbnailPath(game)}
+                                    alt={game.main_title}
+                                    loading="lazy"
+                                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                                />
                             </div>
                             <div className="game-info">
                                 <div className="game-title">{game.main_title}</div>

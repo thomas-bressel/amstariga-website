@@ -25,6 +25,10 @@ function buildQS(filters: GameFilters, extra: Record<string, string | number> = 
         params.append('years', String(y));
     }
 
+    if (filters.is_adult !== undefined) {
+        params.set('is_adult', String(filters.is_adult));
+    }
+
     return params.toString();
 }
 
@@ -73,4 +77,8 @@ export async function fetchSeekOffset(letter: string): Promise<number> {
  */
 export function fetchGame(id: number): Promise<Game> {
     return apiFetch<Game>(`/api/games/${id}`);
+}
+
+export function fetchSuggestions(prefix: string): Promise<string[]> {
+    return apiFetch<string[]>(`/api/games/suggest?q=${encodeURIComponent(prefix)}`);
 }

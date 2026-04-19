@@ -86,7 +86,7 @@ const { title = 'AmstArigA — Fiche jeu', gameId } = Astro.props;
                         </svg>
                     </a>
                 </div>
-                <a href="/" class="back-btn back-btn--inline">
+                <a href="/" class="back-btn back-btn--inline js-back">
                     <span class="back-arrow">←</span>
                     <span class="back-lbl">INDEX</span>
                 </a>
@@ -96,7 +96,7 @@ const { title = 'AmstArigA — Fiche jeu', gameId } = Astro.props;
 
             <div class="hf hf--actions is-visible no-transition">
                 <div class="header-actions">
-                    <a href="/" class="back-btn back-btn--desktop">
+                    <a href="/" class="back-btn back-btn--desktop js-back">
                         <span class="back-arrow">←</span>
                         <span class="back-lbl">INDEX</span>
                     </a>
@@ -108,5 +108,16 @@ const { title = 'AmstArigA — Fiche jeu', gameId } = Astro.props;
         </header>
 
         <slot />
+
+        <script>
+            document.querySelectorAll('.js-back').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    if (history.length > 1) {
+                        e.preventDefault();
+                        history.back();
+                    }
+                });
+            });
+        </script>
     </body>
 </html>

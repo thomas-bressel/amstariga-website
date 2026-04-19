@@ -1,4 +1,17 @@
 /* ============================================================
+   WRAPPER FIXE — contient chip bar + active strip + search
+   ============================================================ */
+.filters-sticky {
+    position: fixed;
+    top: 120px;
+    left: 0;
+    right: 0;
+    z-index: 39;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ============================================================
    CHIP BAR — FILTRES RAPIDES
    ============================================================ */
 .filter-chip-bar {
@@ -9,14 +22,6 @@
     overflow-x: auto;
     scrollbar-width: none;
     background: rgba(24, 20, 18, 0.82);
-    position: sticky;
-    top: 80px;
-    z-index: 39;
-
-    clip-path: none;
-    margin: -10px 0 -14px;
-    border-top: 1px solid transparent;
-    outline: none;
 
     opacity: 0;
     transform: translateY(-20px);
@@ -69,13 +74,6 @@
     padding: 7px 2.5rem;
     background: rgba(10, 10, 10, 0.85);
     border-bottom: 1px solid var(--border);
-
-    /* Fixed sous la chip bar, ne pousse pas le contenu */
-    position: fixed;
-    top: 177px;
-    left: 0;
-    width: 100%;
-    z-index: 38;
 }
 
 .active-filters-strip.has-tags { display: flex; }
@@ -127,7 +125,6 @@
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1px;
     background: var(--border);
-    margin-top: 5rem;
 }
 
 /* CARTE */
@@ -200,10 +197,15 @@
 .game-screenshot {
     background: #000;
     height: 150px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    overflow: hidden;
     border-bottom: 1px solid var(--border);
+}
+
+.game-screenshot img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
 }
 
 .screenshot-placeholder {
@@ -603,7 +605,8 @@
    RESPONSIVE
    ============================================================ */
 @media (max-width: 768px) {
-    .filter-chip-bar    { padding: 8px 1rem; top: 64px; }
+    .filters-sticky     { top: 64px; }
+    .filter-chip-bar    { padding: 8px 1rem; }
     .active-filters-strip { padding: 6px 1rem; }
     .main-content       { padding: 1.5rem 1rem 8rem; }
     .filter-fab         { bottom: 20px; right: 16px; }

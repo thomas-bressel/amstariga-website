@@ -16,6 +16,10 @@ function getLayout(width: number): { radius: number; slots: number[] } {
 interface Props {
     /** Full list of games to cycle through. */
     games: GameListItem[];
+    /** Index to start at (restored from localStorage). */
+    initialIndex?: number;
+    /** Top offset in px to avoid collision with the sticky filter bar. */
+    topOffset?: number;
 }
 
 /**
@@ -32,8 +36,11 @@ interface Props {
  *
  * @param games - Array of games to display; renders nothing if empty.
  */
-export default function Carousel({ games }: Props) {
-    const [index, setIndex]         = useState(0);
+export default function Carousel({ games, initialIndex = 0, topOffset = 0 }: Props) {
+    const [index, setIndex]         = useState(() => {
+        if (!games.length) return 0;
+        return ((initialIndex % games.length) + games.length) % games.length;
+    });
     const [angle, setAngle]         = useState(0);
     const [animating, setAnimating] = useState(false);
     const [layout, setLayout]       = useState(() => getLayout(1200));
@@ -73,7 +80,9 @@ export default function Carousel({ games }: Props) {
         wheel.addEventListener('transitionend', function handler() {
             wheel.removeEventListener('transitionend', handler);
             wheel.style.transition = 'none';
-            setIndex(prev => ((prev + direction) % total + total) % total);
+            const next = ((index + direction) % total + total) % total;
+            setIndex(next);
+            try { localStorage.setItem('amstariga_carousel_index', String(next)); } catch {}
             setAngle(0);
             wheel.style.transform = 'rotateY(0deg)';
             setAnimating(false);
@@ -114,6 +123,7 @@ export default function Carousel({ games }: Props) {
         <div
             ref={containerRef}
             className={`carousel-container${visible ? ' is-visible' : ''}`}
+            style={{ paddingTop: topOffset }}
             onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
             onTouchEnd={e => {
                 const dx = e.changedTouches[0].clientX - touchStartX.current;
