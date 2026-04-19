@@ -1,5 +1,5 @@
 import { apiFetch } from '../api/client';
-import type { Game, GameFilters, GameListItem } from '../types/game';
+import type { Game, GameFilters, GameListItem, Language } from '../types/game';
 
 /**
  * Builds a query string from filters and extra pagination params.
@@ -23,6 +23,10 @@ function buildQS(filters: GameFilters, extra: Record<string, string | number> = 
 
     for (const c of filters.child_categories ?? []) {
         params.append('child_categories', c);
+    }
+
+    for (const l of filters.languages ?? []) {
+        params.append('languages', l);
     }
 
     for (const y of filters.years ?? []) {
@@ -81,6 +85,11 @@ export async function fetchSeekOffset(letter: string): Promise<number> {
  */
 export function fetchGame(id: number): Promise<Game> {
     return apiFetch<Game>(`/api/games/${id}`);
+}
+
+export function fetchAvailableLanguages(filters: GameFilters = {}): Promise<Language[]> {
+    const qs = buildQS(filters);
+    return apiFetch<Language[]>(`/api/games/languages${qs ? `?${qs}` : ''}`);
 }
 
 export function fetchAvailableYears(filters: GameFilters = {}): Promise<number[]> {

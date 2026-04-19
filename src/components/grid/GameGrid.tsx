@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { fetchAvailableYears, fetchGames, fetchGamesCount } from '../../share/models/games';
-import type { GameFilters, GameListItem } from '../../share/types/game';
+import { fetchAvailableLanguages, fetchAvailableYears, fetchGames, fetchGamesCount } from '../../share/models/games';
+import type { GameFilters, GameListItem, Language } from '../../share/types/game';
 import { thumbnailPath } from '../../share/utils/thumbnail';
 import Carousel from '../carousel/Carousel';
 import SearchBar from './SearchBar';
@@ -97,6 +97,13 @@ const CHILD_CATS: Record<string, { name: string; icon: string }[]> = {
 const PARENT_NAMES  = new Set(PARENT_CATS.map(p => p.name));
 const ALL_CHILD_NAMES = new Set(Object.values(CHILD_CATS).flat().map(c => c.name));
 
+const LANG_FLAGS: Record<string, string> = {
+    eng: '🇬🇧', fra: '🇫🇷', deu: '🇩🇪', spa: '🇪🇸', ita: '🇮🇹',
+    por: '🇵🇹', pol: '🇵🇱', dan: '🇩🇰', ell: '🇬🇷', tur: '🇹🇷',
+    nld: '🇳🇱', swe: '🇸🇪', nor: '🇳🇴', fin: '🇫🇮', ces: '🇨🇿',
+    hun: '🇭🇺', ron: '🇷🇴', rus: '🇷🇺', jpn: '🇯🇵', zho: '🇨🇳',
+};
+
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
@@ -148,7 +155,8 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     const [hasMore, setHasMore]     = useState(initialGames.length === BATCH_SIZE);
     const [isLoading, setIsLoading] = useState(false);
     const [filters, setFilters]     = useState<GameFilters>(() => loadFilters() ?? { parent_categories: [], child_categories: [], years: [] });
-    const [availableYears, setAvailableYears] = useState<number[]>([]);
+    const [availableYears, setAvailableYears]         = useState<number[]>([]);
+    const [availableLanguages, setAvailableLanguages] = useState<Language[]>([]);
     const [sheetOpen, setSheetOpen] = useState(false);
     const [view, setView]           = useState<'grid' | 'cover'>(() => {
         try { return (localStorage.getItem('amstariga_view') as 'grid' | 'cover') || 'cover'; } catch { return 'cover'; }
@@ -209,6 +217,24 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
             return () => window.removeEventListener('retro:chipbar-show', handler);
         }
     }, []);
+
+    // Recharge les langues disponibles quand les catégories changent
+    // et purge les langues sélectionnées qui ne sont plus disponibles
+    useEffect(() => {
+        fetchAvailableLanguages({
+            parent_categories: filters.parent_categories,
+            child_categories:  filters.child_categories,
+            years:             filters.years,
+            is_adult:          filters.is_adult,
+        }).then(langs => {
+            setAvailableLanguages(langs);
+            const validSet = new Set(langs.map(l => l.iso_code));
+            const invalidLangs = (filters.languages ?? []).filter(l => !validSet.has(l));
+            if (invalidLangs.length > 0) {
+                applyFilters({ ...filters, languages: (filters.languages ?? []).filter(l => validSet.has(l)) });
+            }
+        }).catch(() => {});
+    }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), JSON.stringify(filters.years), filters.is_adult]);
 
     // Recharge les années disponibles quand les catégories ou is_adult changent
     // et purge les années sélectionnées qui ne sont plus dans la liste
@@ -365,10 +391,16 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
         applyFilters({ ...filters, years: next });
     }
 
+    function toggleLanguage(iso: string) {
+        const langs = filters.languages ?? [];
+        const next  = langs.includes(iso) ? langs.filter(l => l !== iso) : [...langs, iso];
+        applyFilters({ ...filters, languages: next });
+    }
+
     /** Clears all active filters and reloads the full game list. */
     function resetFilters() {
         try { localStorage.removeItem(LS_KEY); } catch {}
-        applyFilters({ parent_categories: [], child_categories: [], years: [] });
+        applyFilters({ parent_categories: [], child_categories: [], languages: [], years: [] });
     }
 
     function toggleAdult() {
@@ -379,6 +411,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     const activeCount =
         (filters.parent_categories?.length ?? 0) +
         (filters.child_categories?.length  ?? 0) +
+        (filters.languages?.length         ?? 0) +
         (filters.years?.length             ?? 0) +
         (filters.is_adult !== undefined ? 1 : 0);
 
@@ -414,32 +447,8 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
 
     return (
         <div>
-            {/* ── Sticky wrapper : chip bar + active strip + search ── */}
+            {/* ── Sticky wrapper : active strip + search ── */}
             <div className="filters-sticky" ref={stickyRef}>
-                <div className="filter-chip-bar">
-                    <button
-                        className={`fchip fchip-all ${activeCount === 0 ? 'fchip-active' : ''}`}
-                        onClick={resetFilters}
-                    >
-                        ✦ TOUS
-                    </button>
-                    {PARENT_CATS.map(({ name, icon }) => (
-                        <button
-                            key={name}
-                            className={`fchip ${filters.parent_categories?.includes(name) ? 'fchip-active' : ''}`}
-                            onClick={() => toggleCategory(name)}
-                        >
-                            {icon} {name}
-                        </button>
-                    ))}
-                    <button
-                        className={`fchip ${filters.is_adult === true ? 'fchip-active' : ''}`}
-                        onClick={toggleAdult}
-                    >
-                        🔞 ADULT
-                    </button>
-                </div>
-
                 {/* ── Active filters strip ── */}
                 {activeCount > 0 && (
                     <div className="active-filters-strip has-tags">
@@ -451,6 +460,11 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                         {filters.child_categories?.map(cat => (
                             <span key={cat} className="atag" onClick={() => toggleCategory(cat)}>
                                 {cat} <span className="atag-x">&times;</span>
+                            </span>
+                        ))}
+                        {filters.languages?.map(iso => (
+                            <span key={iso} className="atag" onClick={() => toggleLanguage(iso)}>
+                                {LANG_FLAGS[iso] ?? '🌐'} {iso.toUpperCase()} <span className="atag-x">&times;</span>
                             </span>
                         ))}
                         {filters.years?.map(y => (
@@ -560,6 +574,23 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                                             >
                                                 <span className="cat-ico">{icon}</span>
                                                 {name.toUpperCase()}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                            {availableLanguages.length > 0 && (
+                                <>
+                                    <div className="sheet-section-lbl">🌐 Langue</div>
+                                    <div className="lang-grid">
+                                        {availableLanguages.map(({ iso_code, name }) => (
+                                            <button
+                                                key={iso_code}
+                                                className={`lang-btn ${filters.languages?.includes(iso_code) ? 'active' : ''}`}
+                                                onClick={() => toggleLanguage(iso_code)}
+                                            >
+                                                <span className="lang-flag">{LANG_FLAGS[iso_code] ?? '🌐'}</span>
+                                                {name}
                                             </button>
                                         ))}
                                     </div>

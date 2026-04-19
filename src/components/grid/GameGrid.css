@@ -1,5 +1,5 @@
 /* ============================================================
-   WRAPPER FIXE — contient chip bar + active strip + search
+   WRAPPER FIXE — contient active strip + search
    ============================================================ */
 .filters-sticky {
     position: fixed;
@@ -23,52 +23,6 @@
     transition: none;
 }
 
-/* ============================================================
-   CHIP BAR — FILTRES RAPIDES
-   ============================================================ */
-.filter-chip-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px 1rem;
-    overflow-x: auto;
-    scrollbar-width: none;
-    background: rgba(24, 20, 18, 0.82);
-}
-
-.filter-chip-bar::-webkit-scrollbar { display: none; }
-
-.fchip {
-    flex-shrink: 0;
-    display: inline-flex; align-items: center; gap: 5px;
-    padding: 5px 14px;
-    font-family: 'Courier New', monospace;
-    font-size: 0.68rem; font-weight: bold; letter-spacing: 1px;
-    text-transform: uppercase;
-    border: 1px solid var(--border-hi);
-    color: var(--text-dim); background: transparent;
-    cursor: pointer;
-    transition: border-color 0.15s, color 0.15s, background 0.15s;
-    white-space: nowrap;
-    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
-}
-
-.fchip:hover:not(.fchip-active) {
-    border-color: var(--green);
-    color: var(--green);
-}
-
-.fchip.fchip-active {
-    background: var(--green-dim);
-    border-color: var(--green);
-    color: var(--green);
-}
-
-.fchip-all { border-style: dashed; }
-.fchip-all.fchip-active {
-    background: transparent; border-style: solid;
-    border-color: var(--text-dim); color: var(--text-dim);
-}
 
 /* ============================================================
    ACTIVE FILTERS STRIP
@@ -534,6 +488,19 @@
 .tri-btn.on-yes { background: var(--green-dim); border-color: var(--green); color: var(--green); font-weight: bold; }
 .tri-btn.on-no  { border-color: var(--red); color: var(--red); font-weight: bold; }
 
+/* Langues */
+.lang-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.lang-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text-dim); font-family: monospace;
+    font-size: 0.65rem; cursor: pointer; transition: all 0.15s; letter-spacing: 1px;
+}
+.lang-btn .lang-flag { font-size: 1rem; line-height: 1; }
+.lang-btn:hover:not(.active) { border-color: var(--green); color: var(--green); }
+.lang-btn.active { background: var(--green-dim); border-color: var(--green); color: var(--green); font-weight: bold; }
+
 /* Années */
 .year-grid { display: flex; flex-wrap: wrap; gap: 6px; }
 .year-pill {
@@ -571,7 +538,6 @@
 
 @media (min-width: 769px) {
     .filters-sticky       { top: 120px; }
-    .filter-chip-bar      { padding: 18px 4rem 22px 5rem; }
     .active-filters-strip { padding: 7px 2.5rem; }
     .main-content         { padding: 2rem 2.5rem 8rem; }
     .screenshot-grid      { grid-template-columns: repeat(3, 1fr); }

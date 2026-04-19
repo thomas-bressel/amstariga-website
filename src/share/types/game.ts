@@ -6,6 +6,8 @@ export interface GameFilters {
     parent_categories?: string[];
     /** Catégories enfants (Action, Shoot'Em Up…) — filtre OR, AND avec parent_categories. */
     child_categories?: string[];
+    /** Langues (iso_code : eng, fra…) — filtre OR. */
+    languages?: string[];
     /** List of release years to include (OR logic). */
     years?: number[];
     /** Filter by adult content: true = only adult, false = exclude adult, undefined = all. */
@@ -44,6 +46,11 @@ export interface GameDump {
 export interface GameComment {
     author?:  string;
     content?: string;
+}
+
+export interface Language {
+    iso_code: string;
+    name:     string;
 }
 
 export interface CompilationGame {
