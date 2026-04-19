@@ -10,7 +10,7 @@
     width: 100%;
     z-index: 1000;
     pointer-events: none;
-    height: 64px;
+    height: 56px;
 }
 
 /* Conteneur legacy neutralisé */
@@ -33,18 +33,18 @@
     pointer-events: auto;
 }
 
-/* Fragment 1 — logo, gauche, arrive du haut */
+/* Fragment 1 — plein largeur mobile, logo + actions sur une seule ligne */
 .hf--logo {
     top: 0; left: 0;
     width: 100%;
-    height: 100px;
+    height: 56px;
     background: rgba(30, 26, 22, 0.92);
     clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
     display: flex;
+    flex-direction: row;
     align-items: center;
-    padding-left: 1rem;
-    padding-right: 1rem;
     justify-content: space-between;
+    padding: 0 1rem;
     opacity: 0;
     transform: translateY(-120px) skewX(-8deg);
     z-index: 3;
@@ -107,28 +107,56 @@
     100%    { opacity: 0.6; }
 }
 
+/* ── LIGNE LOGO MOBILE ── */
+.hf-logo-row {
+    display: flex;
+    align-items: center;
+}
+
+/* ── ACTIONS MOBILE (< 769px) ── */
+.hf-mobile-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Le bouton FILTRES mobile utilise la classe view-btn — badge positionné en absolu */
+.hf-mobile-actions .view-btn { position: relative; }
+
 /* ── LOGO SVG ── */
 .logo {
     pointer-events: auto;
-    position: fixed;
-    top: 12px;
-    left: 1.8rem;
     display: flex;
     align-items: baseline;
     gap: 0;
     cursor: pointer;
     text-decoration: none;
-    z-index: 1002;
     line-height: 1;
 }
 
-.logo-svg {
-    width: 280px;
-    height: 64px;
+/* Logo complet (desktop) caché en mobile */
+.logo-svg--full { display: none; }
+
+/* Logo AAA (mobile) */
+.logo-svg--aaa {
+    width: 90px;
+    height: 38px;
     overflow: visible;
     display: block;
 }
 
+.logo-t-amstrad-m,
+.logo-t-atari-m,
+.logo-t-amiga-m {
+    font-size: 38px;
+    font-weight: 900;
+    font-family: 'Courier New', monospace;
+}
+.logo-t-amstrad-m { fill: url(#grad-amstrad-m); }
+.logo-t-atari-m   { fill: url(#grad-atari-m); }
+.logo-t-amiga-m   { fill: url(#grad-amiga-m); }
+
+/* Classes desktop (non utilisées en mobile, définies pour le desktop) */
 .logo-t-rest {
     font-size: 26px;
     font-weight: 600;
@@ -210,14 +238,9 @@
 /* ── ACTIONS ── */
 .header-actions {
     pointer-events: auto;
-    position: fixed;
-    top: 22px;
-    right: 1.5rem;
-    display: flex;
+    display: none;
     align-items: center;
     gap: 12px;
-    z-index: 1002;
-    transform: skewX(10deg) rotate(1.5deg);
 }
 
 .view-toggle {
@@ -234,7 +257,8 @@
     transition: all 0.2s;
 }
 
-.view-btn.active {
+.view-btn.active,
+.view-btn.has-active {
     background: var(--green-dim);
     border-color: var(--green);
     color: var(--green);
@@ -324,7 +348,7 @@
     box-shadow: 0 0 6px var(--green);
 }
 
-.main-layout { padding-top: 80px; }
+.main-layout { padding-top: 56px; }
 
 /* ── DESKTOP ── */
 @media (min-width: 769px) {
@@ -406,6 +430,33 @@
         );
         transform: rotate(-2deg);
         filter: blur(0.5px);
+    }
+
+    .logo-svg--full { display: block; width: 280px; height: 64px; overflow: visible; }
+    .logo-svg--aaa  { display: none; }
+
+    /* En desktop, le fragment logo revient à une seule ligne horizontale */
+    .hf--logo {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0;
+        padding: 0 0 0 1.8rem;
+    }
+
+    .hf-mobile-actions { display: none; }
+
+    .header-actions {
+        display: flex;
+        position: fixed;
+        top: 22px;
+        right: 1.5rem;
+        z-index: 1002;
+        transform: skewX(10deg) rotate(1.5deg);
+    }
+
+    .logo {
+        position: static;
     }
 
     .detail-page .hf--logo { justify-content: flex-start; }

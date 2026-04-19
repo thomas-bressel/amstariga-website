@@ -5,39 +5,102 @@ import './TapeCounter.css';
 ---
 <header class="main-header">
 
-  <!-- FRAGMENT 1 : logo -->
+  <!-- FRAGMENT 1 : logo + actions mobile -->
   <div class="hf hf--logo ">
-    <div class="logo">
-      <svg class="logo-svg" viewBox="0 0 280 64" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="grad-amstrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%"   stop-color="#FFFFFF"/>
-            <stop offset="40%"  stop-color="#FFFFFF"/>
-            <stop offset="40%"  stop-color="#AA1111"/>
-            <stop offset="60%"  stop-color="#AA1111"/>
-            <stop offset="60%"  stop-color="#FFFFFF"/>
-            <stop offset="100%" stop-color="#FFFFFF"/>
-          </linearGradient>
-          <linearGradient id="grad-atari" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%"   stop-color="#FF0000"/>
-            <stop offset="40%"  stop-color="#FFEE00"/>
-            <stop offset="100%" stop-color="#00CCFF"/>
-          </linearGradient>
-          <linearGradient id="grad-amiga" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%"   stop-color="#0033CC"/>
-            <stop offset="20%"  stop-color="#00AAFF"/>
-            <stop offset="40%"  stop-color="#00DD44"/>
-            <stop offset="60%"  stop-color="#FFEE00"/>
-            <stop offset="80%"  stop-color="#FF6600"/>
-            <stop offset="100%" stop-color="#EE1111"/>
-          </linearGradient>
-        </defs>
-        <text class="logo-t-amstrad" x="10"  y="46">A</text>
-        <text class="logo-t-rest"    x="44"  y="48">mst</text>
-        <text class="logo-t-atari"   x="86"  y="52">A</text>
-        <text class="logo-t-rest"    x="124" y="52">rig</text>
-        <text class="logo-t-amiga"   x="172" y="56">A</text>
-      </svg>
+    <div class="hf-logo-row">
+      <div class="logo">
+
+        <!-- Logo complet — desktop uniquement -->
+        <svg class="logo-svg logo-svg--full" viewBox="0 0 280 64" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="grad-amstrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stop-color="#FFFFFF"/>
+              <stop offset="40%"  stop-color="#FFFFFF"/>
+              <stop offset="40%"  stop-color="#AA1111"/>
+              <stop offset="60%"  stop-color="#AA1111"/>
+              <stop offset="60%"  stop-color="#FFFFFF"/>
+              <stop offset="100%" stop-color="#FFFFFF"/>
+            </linearGradient>
+            <linearGradient id="grad-atari" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stop-color="#FF0000"/>
+              <stop offset="40%"  stop-color="#FFEE00"/>
+              <stop offset="100%" stop-color="#00CCFF"/>
+            </linearGradient>
+            <linearGradient id="grad-amiga" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stop-color="#0033CC"/>
+              <stop offset="20%"  stop-color="#00AAFF"/>
+              <stop offset="40%"  stop-color="#00DD44"/>
+              <stop offset="60%"  stop-color="#FFEE00"/>
+              <stop offset="80%"  stop-color="#FF6600"/>
+              <stop offset="100%" stop-color="#EE1111"/>
+            </linearGradient>
+          </defs>
+          <text class="logo-t-amstrad" x="10"  y="46">A</text>
+          <text class="logo-t-rest"    x="44"  y="48">mst</text>
+          <text class="logo-t-atari"   x="86"  y="52">A</text>
+          <text class="logo-t-rest"    x="124" y="52">rig</text>
+          <text class="logo-t-amiga"   x="172" y="56">A</text>
+        </svg>
+
+        <!-- Logo AAA — mobile uniquement, 3 A alignés sur la même baseline -->
+        <svg class="logo-svg logo-svg--aaa" viewBox="0 0 96 42" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="grad-amstrad-m" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stop-color="#FFFFFF"/>
+              <stop offset="40%"  stop-color="#FFFFFF"/>
+              <stop offset="40%"  stop-color="#AA1111"/>
+              <stop offset="60%"  stop-color="#AA1111"/>
+              <stop offset="60%"  stop-color="#FFFFFF"/>
+              <stop offset="100%" stop-color="#FFFFFF"/>
+            </linearGradient>
+            <linearGradient id="grad-atari-m" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stop-color="#FF0000"/>
+              <stop offset="40%"  stop-color="#FFEE00"/>
+              <stop offset="100%" stop-color="#00CCFF"/>
+            </linearGradient>
+            <linearGradient id="grad-amiga-m" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stop-color="#0033CC"/>
+              <stop offset="20%"  stop-color="#00AAFF"/>
+              <stop offset="40%"  stop-color="#00DD44"/>
+              <stop offset="60%"  stop-color="#FFEE00"/>
+              <stop offset="80%"  stop-color="#FF6600"/>
+              <stop offset="100%" stop-color="#EE1111"/>
+            </linearGradient>
+          </defs>
+          <text class="logo-t-amstrad-m" x="2"  y="38">A</text>
+          <text class="logo-t-atari-m"   x="34" y="38">A</text>
+          <text class="logo-t-amiga-m"   x="66" y="38">A</text>
+        </svg>
+
+      </div>
+    </div>
+    <!-- Actions visibles uniquement en mobile (< 769px) -->
+    <div class="hf-mobile-actions">
+      <button class="view-btn" id="filter-header-btn-m" title="Filtres" style="position:relative">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="4" y1="6" x2="20" y2="6"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+          <line x1="11" y1="18" x2="13" y2="18"></line>
+        </svg>
+        <span class="filter-header-badge" id="filter-header-badge-m" style="display:none"></span>
+      </button>
+      <div class="view-toggle">
+        <button class="view-btn" data-view="grid">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+        </button>
+        <button class="view-btn" data-view="cover">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+      </div>
+      <button class="esc-btn" id="esc-btn-m" title="Éteindre">ESC</button>
     </div>
   </div>
 
@@ -85,15 +148,16 @@ import './TapeCounter.css';
 </header>
 
 <script is:inline>
-  var escBtn = document.getElementById('esc-btn');
-  if (escBtn) {
-    escBtn.addEventListener('click', function () {
+  // ESC — desktop et mobile
+  ['esc-btn', 'esc-btn-m'].forEach(function (id) {
+    var btn = document.getElementById(id);
+    if (btn) btn.addEventListener('click', function () {
       localStorage.removeItem('amstariga_visited');
       if (typeof window.crtShutdown === 'function') window.crtShutdown();
     });
-  }
+  });
 
-  // Restore active button from localStorage
+  // Restore active view button from localStorage
   (function () {
     var saved = localStorage.getItem('amstariga_view') || 'cover';
     document.querySelectorAll('.view-btn[data-view]').forEach(function (b) {
@@ -101,22 +165,26 @@ import './TapeCounter.css';
     });
   })();
 
-  var filterBtn   = document.getElementById('filter-header-btn');
-  var filterBadge = document.getElementById('filter-header-badge');
-  if (filterBtn) {
-    filterBtn.addEventListener('click', function () {
+  // Bouton FILTRES — desktop et mobile
+  ['filter-header-btn', 'filter-header-btn-m'].forEach(function (id) {
+    var btn = document.getElementById(id);
+    if (btn) btn.addEventListener('click', function () {
       window.dispatchEvent(new CustomEvent('retro:open-filters'));
     });
-  }
+  });
+
+  // Badge filtre — mis à jour sur les deux boutons
   window.addEventListener('retro:filter-count', function (e) {
     var count = e.detail.count;
-    if (filterBadge) {
-      filterBadge.textContent = count;
-      filterBadge.style.display = count > 0 ? 'flex' : 'none';
-    }
-    if (filterBtn) {
-      filterBtn.classList.toggle('has-active', count > 0);
-    }
+    ['filter-header-btn', 'filter-header-btn-m'].forEach(function (id) {
+      var btn   = document.getElementById(id);
+      var badge = document.getElementById(id.replace('btn', 'badge'));
+      if (badge) {
+        badge.textContent = count;
+        badge.style.display = count > 0 ? 'flex' : 'none';
+      }
+      if (btn) btn.classList.toggle('has-active', count > 0);
+    });
   });
 
   document.querySelectorAll('.view-btn[data-view]').forEach(function (btn) {
