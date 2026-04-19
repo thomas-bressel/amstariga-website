@@ -248,7 +248,9 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     }, []);
 
     // IntersectionObserver on the sentinel element at the bottom of the list
+    // Désactivé en vue carousel : pas de scroll, le sentinel resterait toujours visible
     useEffect(() => {
+        if (view === 'cover') return;
         const sentinel = sentinelRef.current;
         if (!sentinel) return;
 
@@ -258,7 +260,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
 
         observer.observe(sentinel);
         return () => observer.disconnect();
-    }, []);
+    }, [view]);
 
     // Listen to view-change events dispatched by the header view-toggle buttons
     useEffect(() => {
@@ -481,8 +483,10 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
             {view === 'cover' ? (
                 <Carousel
                     games={games}
+                    total={total}
                     initialIndex={(() => { try { return parseInt(localStorage.getItem(LS_CAROUSEL) ?? '0', 10) || 0; } catch { return 0; } })()}
                     topOffset={stickyH}
+                    onNearEnd={() => loadMore()}
                 />
             ) : (
                 <div className="games-container" style={{ marginTop: stickyH }}>

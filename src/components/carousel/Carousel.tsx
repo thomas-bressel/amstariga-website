@@ -16,10 +16,14 @@ function getLayout(width: number): { radius: number; slots: number[] } {
 interface Props {
     /** Full list of games to cycle through. */
     games: GameListItem[];
+    /** Total number of games (may exceed games.length if not all loaded yet). */
+    total?: number;
     /** Index to start at (restored from localStorage). */
     initialIndex?: number;
     /** Top offset in px to avoid collision with the sticky filter bar. */
     topOffset?: number;
+    /** Called when the user navigates near the end of loaded games, to trigger a new batch fetch. */
+    onNearEnd?: () => void;
 }
 
 /**
@@ -36,7 +40,7 @@ interface Props {
  *
  * @param games - Array of games to display; renders nothing if empty.
  */
-export default function Carousel({ games, initialIndex = 0, topOffset = 0 }: Props) {
+export default function Carousel({ games, total, initialIndex = 0, topOffset = 0, onNearEnd }: Props) {
     const [index, setIndex]         = useState(() => {
         if (!games.length) return 0;
         return ((initialIndex % games.length) + games.length) % games.length;
@@ -47,7 +51,6 @@ export default function Carousel({ games, initialIndex = 0, topOffset = 0 }: Pro
     const wheelRef                  = useRef<HTMLDivElement>(null);
     const containerRef              = useRef<HTMLDivElement>(null);
     const touchStartX               = useRef(0);
-    const total                     = games.length;
 
     useEffect(() => {
         setLayout(getLayout(window.innerWidth));
@@ -57,6 +60,14 @@ export default function Carousel({ games, initialIndex = 0, topOffset = 0 }: Pro
     }, []);
 
     const { radius, slots } = layout;
+    const displayTotal = total ?? games.length;
+
+    // Charge le batch suivant quand on approche les 10 derniers jeux chargés
+    useEffect(() => {
+        if (onNearEnd && total && index >= games.length - 10 && games.length < total) {
+            onNearEnd();
+        }
+    }, [index]);
 
     /**
      * Rotates the carousel by one slot in the given direction.
@@ -67,7 +78,8 @@ export default function Carousel({ games, initialIndex = 0, topOffset = 0 }: Pro
      * @param direction - `1` to advance (next), `-1` to go back (prev).
      */
     const move = useCallback((direction: number) => {
-        if (animating || !total) return;
+        const count = games.length;
+        if (animating || !count) return;
         setAnimating(true);
 
         const wheel = wheelRef.current;
@@ -80,14 +92,14 @@ export default function Carousel({ games, initialIndex = 0, topOffset = 0 }: Pro
         wheel.addEventListener('transitionend', function handler() {
             wheel.removeEventListener('transitionend', handler);
             wheel.style.transition = 'none';
-            const next = ((index + direction) % total + total) % total;
+            const next = ((index + direction) % count + count) % count;
             setIndex(next);
             try { localStorage.setItem('amstariga_carousel_index', String(next)); } catch {}
             setAngle(0);
             wheel.style.transform = 'rotateY(0deg)';
             setAnimating(false);
         });
-    }, [animating, angle, total]);
+    }, [animating, angle, games.length]);
 
     // Show carousel — immediately on return visit, or via boot event on first visit
     const [visible, setVisible] = useState(false);
@@ -115,7 +127,7 @@ export default function Carousel({ games, initialIndex = 0, topOffset = 0 }: Pro
         return () => container.removeEventListener('wheel', handler);
     }, [move]);
 
-    if (!total) return null;
+    if (!games.length) return null;
 
     const active = games[index];
 
@@ -147,7 +159,8 @@ export default function Carousel({ games, initialIndex = 0, topOffset = 0 }: Pro
                         );
                     })}
                     {slots.map(offset => {
-                        const gameIdx   = ((index + offset) % total + total) % total;
+                        const count   = games.length;
+                        const gameIdx = ((index + offset) % count + count) % count;
                         const game      = games[gameIdx];
                         const itemAngle = offset * STEP;
                         const abs       = Math.abs(offset);
@@ -175,7 +188,7 @@ export default function Carousel({ games, initialIndex = 0, topOffset = 0 }: Pro
 
             <div className="carousel-controls">
                 <button className="carousel-btn" onClick={() => move(-1)}>◀</button>
-                <span className="carousel-counter">{index + 1} / {total}</span>
+                <span className="carousel-counter">{index + 1} / {displayTotal}</span>
                 <button className="carousel-btn" onClick={() => move(1)}>▶</button>
             </div>
         </div>
