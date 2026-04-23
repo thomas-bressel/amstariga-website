@@ -1,0 +1,148 @@
+---
+import MaintenanceLayout from '../layouts/MaintenanceLayout.astro';
+---
+
+<MaintenanceLayout>
+    <div class="maintenance-wrap">
+        <div class="maintenance-box">
+            <div class="maint-tag">// SYSTÈME EN COURS DE DÉMARRAGE</div>
+            <h1 class="maint-title">MAINTENANCE</h1>
+            <div class="maint-blink">█</div>
+            <p class="maint-msg">
+                Le système est temporairement hors ligne pour maintenance.<br/>
+                Revenez quand ça sera fini…
+            </p>
+            <p class="maint-taunt">
+                vous n'êtes pas prêts les gars&nbsp;;)
+            </p>
+            <div class="maint-progress">
+                <div class="maint-progress-bar"></div>
+            </div>
+            <div class="maint-footer">AMSTARIGA v2.0 — EN CONSTRUCTION</div>
+        </div>
+    </div>
+
+    <button class="esc-btn maint-esc" id="esc-btn" title="Éteindre">ESC</button>
+</MaintenanceLayout>
+
+<script is:inline>
+  var escBtn = document.getElementById('esc-btn');
+  if (escBtn) {
+    escBtn.addEventListener('click', function () {
+      localStorage.removeItem('amstariga_visited');
+      if (typeof window.crtShutdown === 'function') window.crtShutdown();
+    });
+  }
+</script>
+
+<style>
+.maintenance-wrap {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.maintenance-box {
+    text-align: center;
+    padding: 2.5rem 2rem;
+    max-width: fit-content;
+    width: 90%;
+    background: rgba(20, 17, 15, 0.82);
+    border: 1px solid var(--border-hi);
+    border-top: 2px solid var(--green);
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+}
+
+.maint-tag {
+    font-family: 'Courier New', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    color: var(--green);
+    opacity: 0.7;
+    text-transform: uppercase;
+}
+
+.maint-title {
+    font-family: 'Courier New', monospace;
+    font-size: clamp(2rem, 8vw, 3.5rem);
+    font-weight: 900;
+    letter-spacing: 0.3em;
+    color: var(--text);
+    margin: 0;
+    text-shadow: 0 0 30px rgba(158, 212, 178, 0.4);
+}
+
+.maint-blink {
+    font-family: 'Courier New', monospace;
+    font-size: 1.4rem;
+    color: var(--green);
+    animation: blink 1s step-end infinite;
+    line-height: 1;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+}
+
+.maint-msg {
+    font-family: 'Courier New', monospace;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    line-height: 1.8;
+    letter-spacing: 0.05em;
+    margin: 0;
+}
+
+.maint-taunt {
+    font-family: 'Courier New', monospace;
+    font-size: 0.82rem;
+    font-style: italic;
+    color: var(--green);
+    margin: 0;
+    letter-spacing: 0.03em;
+}
+
+.maint-progress {
+    width: 100%;
+    height: 2px;
+    background: var(--border);
+    overflow: hidden;
+}
+
+.maint-progress-bar {
+    height: 100%;
+    width: 40%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: progress 3s ease-in-out infinite alternate;
+}
+
+@keyframes progress {
+    0%   { width: 15%; margin-left: 0; }
+    100% { width: 60%; margin-left: 35%; }
+}
+
+.maint-footer {
+    font-family: 'Courier New', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 4px;
+    color: var(--text-dim);
+    opacity: 0.4;
+    text-transform: uppercase;
+}
+
+.maint-esc {
+    position: fixed;
+    top: 18px;
+    right: 1.5rem;
+    z-index: 1002;
+}
+</style>

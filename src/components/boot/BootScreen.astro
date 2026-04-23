@@ -1,7 +1,9 @@
 ---
 import './BootScreen.css';
+interface Props { silent?: boolean; }
+const { silent = false } = Astro.props;
 ---
-<div id="crt-boot" aria-hidden="true">
+<div id="crt-boot" aria-hidden="true" data-silent={silent ? 'true' : 'false'}>
   <div class="crt-scanlines"></div>
   <div class="crt-vignette"></div>
 
@@ -52,13 +54,11 @@ import './BootScreen.css';
 (function () {
     'use strict';
 
+    var silent = document.getElementById('crt-boot').dataset.silent === 'true';
+
     /** Shared AudioContext — created once on first user interaction. @type {AudioContext|null} */
     var ctx = null;
 
-    /**
-     * Creates the AudioContext on first call (lazy, requires a user gesture).
-     * Subsequent calls are no-ops.
-     */
     function initAudio() {
         if (ctx) return;
         ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -248,21 +248,20 @@ import './BootScreen.css';
         var cracks  = document.querySelectorAll('.hf-crack');
         var BASE    = 2000;
 
-        setTimeout(function () { if (logo)    logo.classList.add('is-visible');    impactSound(); }, BASE);
-        setTimeout(function () { if (mid)     mid.classList.add('is-visible');     impactSound(); }, BASE + 700);
-        setTimeout(function () { if (actions) actions.classList.add('is-visible'); impactSound(); }, BASE + 1400);
+        setTimeout(function () { if (logo)    logo.classList.add('is-visible');    if (!silent) impactSound(); }, BASE);
+        setTimeout(function () { if (mid)     mid.classList.add('is-visible');     if (!silent) impactSound(); }, BASE + 700);
+        setTimeout(function () { if (actions) actions.classList.add('is-visible'); if (!silent) impactSound(); }, BASE + 1400);
         setTimeout(function () {
             cracks.forEach(function (c) { c.classList.add('is-visible'); });
-            beep(1200, 'sine', 0.06, 0.15, 0);
+            if (!silent) beep(1200, 'sine', 0.06, 0.15, 0);
         }, BASE + 1800);
         setTimeout(function () {
             window.dispatchEvent(new CustomEvent('retro:chipbar-show'));
-            beep(180, 'sine', 0.1, 0.12, 0);
+            if (!silent) beep(180, 'sine', 0.1, 0.12, 0);
         }, BASE + 2200);
         setTimeout(function () {
             window.dispatchEvent(new CustomEvent('retro:carousel-show'));
-            carouselGrow();
-            setTimeout(carouselBounce, 620);
+            if (!silent) { carouselGrow(); setTimeout(carouselBounce, 620); }
         }, BASE + 2800);
     }
 

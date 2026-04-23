@@ -1,0 +1,27 @@
+---
+import '../styles/global.css';
+import '../components/header/Header.css';
+import ThemeInit from '../components/boot/ThemeInit.astro';
+import Background3D from '../components/background/Background3D.astro';
+import BootScreen from '../components/boot/BootScreen.astro';
+---
+<!doctype html>
+<html lang="fr">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" href="/favicon.ico" />
+        <title>AmstARIGa — Maintenance</title>
+    </head>
+    <body>
+        <ThemeInit />
+        <BootScreen silent={true} />
+        <Background3D />
+        <slot />
+    </body>
+</html>
+
+<style>
+html { margin: 0; width: 100%; height: 100%; overflow-x: clip; }
+body { margin: 0; width: 100%; height: 100%; }
+</style>
