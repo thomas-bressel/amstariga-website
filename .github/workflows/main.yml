@@ -34,7 +34,7 @@ jobs:
         build-args: |
           APP_ENV=production
         tags: |
-          ${{ secrets.DOCKERHUB_USERNAME }}/amstariga-website:prod
+          ${{ secrets.DOCKERHUB_USERNAME }}/amstariga-website:production
           ${{ secrets.DOCKERHUB_USERNAME }}/amstariga-website:${{ github.sha }}
 
     - name: Deploy to VPS
