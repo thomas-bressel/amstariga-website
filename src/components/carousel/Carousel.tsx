@@ -20,6 +20,8 @@ interface Props {
     total?: number;
     /** Index to start at (restored from localStorage). */
     initialIndex?: number;
+    /** Changes when the list is replaced (search, filters): the carousel restarts at initialIndex. */
+    listId?: number;
     /** Top offset in px to avoid collision with the sticky filter bar. */
     topOffset?: number;
     /** Called when the user navigates near the end of loaded games, to trigger a new batch fetch. */
@@ -40,11 +42,10 @@ interface Props {
  *
  * @param games - Array of games to display; renders nothing if empty.
  */
-export default function Carousel({ games, total, initialIndex = 0, topOffset = 0, onNearEnd }: Props) {
-    const [index, setIndex]         = useState(() => {
-        if (!games.length) return 0;
-        return ((initialIndex % games.length) + games.length) % games.length;
-    });
+export default function Carousel({ games, total, initialIndex = 0, topOffset = 0, listId = 0, onNearEnd }: Props) {
+    const startIndex = (count: number) => count ? ((initialIndex % count) + count) % count : 0;
+    const [index, setIndex]         = useState(() => startIndex(games.length));
+    const [shownList, setShownList] = useState(listId);
     const [angle, setAngle]         = useState(0);
     const [animating, setAnimating] = useState(false);
     const [layout, setLayout]       = useState(() => getLayout(1200));
@@ -99,7 +100,7 @@ export default function Carousel({ games, total, initialIndex = 0, topOffset = 0
             wheel.style.transform = 'rotateY(0deg)';
             setAnimating(false);
         });
-    }, [animating, angle, games.length]);
+    }, [animating, angle, index, games.length]);
 
     // Show carousel — immediately on return visit, or via boot event on first visit
     const [visible, setVisible] = useState(false);
@@ -126,6 +127,14 @@ export default function Carousel({ games, total, initialIndex = 0, topOffset = 0
         container.addEventListener('wheel', handler, { passive: false });
         return () => container.removeEventListener('wheel', handler);
     }, [move]);
+
+    // Nouvelle liste : l'index courant peut ne plus y exister. Rendu abandonné, React le
+    // recommence aussitôt avec le nouvel index.
+    if (shownList !== listId) {
+        setShownList(listId);
+        setIndex(startIndex(games.length));
+        return null;
+    }
 
     if (!games.length) return null;
 

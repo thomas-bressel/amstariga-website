@@ -19,25 +19,40 @@ export default function SearchBar({ value, filters, onChange, onSubmit }: Props)
     const [activeIdx, setActiveIdx]     = useState(-1);
     const timerRef                      = useRef<ReturnType<typeof setTimeout> | null>(null);
     const inputRef                      = useRef<HTMLInputElement>(null);
+    const filtersRef                    = useRef(filters);
+    // Numéro de la dernière demande de suggestions : une réponse plus ancienne est ignorée
+    const requestRef                    = useRef(0);
 
-    // Fetch suggestions with debounce whenever input changes
-    useEffect(() => {
+    filtersRef.current = filters;
+
+    // Pending suggestions are dropped when the component unmounts
+    useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+    /**
+     * Fetches suggestions with debounce for the text being typed. Only typing triggers it:
+     * a submitted search (which changes the filters) must not reopen the menu.
+     */
+    function suggest(text: string) {
         if (timerRef.current) clearTimeout(timerRef.current);
-        if (value.length < MIN_CHARS) {
+        const request = ++requestRef.current;
+        if (text.trim().length < MIN_CHARS) {
             setSuggestions([]);
             setOpen(false);
             return;
         }
         timerRef.current = setTimeout(async () => {
-            const results = await fetchSuggestions(value, filters).catch(() => []);
+            const results = await fetchSuggestions(text, filtersRef.current).catch(() => []);
+            if (request !== requestRef.current) return;
             setSuggestions(results);
             setOpen(results.length > 0);
             setActiveIdx(-1);
         }, DEBOUNCE_MS);
-        return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-    }, [value, filters]);
+    }
 
     function submit(term: string) {
+        // Annule la demande de suggestions en attente ou en cours
+        if (timerRef.current) clearTimeout(timerRef.current);
+        requestRef.current++;
         setOpen(false);
         setSuggestions([]);
         onSubmit(term);
@@ -74,7 +89,7 @@ export default function SearchBar({ value, filters, onChange, onSubmit }: Props)
                     type="text"
                     value={value}
                     placeholder="RECHERCHER UN JEU..."
-                    onChange={e => { onChange(e.target.value); }}
+                    onChange={e => { onChange(e.target.value); suggest(e.target.value); }}
                     onKeyDown={handleKeyDown}
                     onBlur={() => setTimeout(() => setOpen(false), 150)}
                     onFocus={() => suggestions.length > 0 && setOpen(true)}

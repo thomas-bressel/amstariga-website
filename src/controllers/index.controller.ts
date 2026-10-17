@@ -1,5 +1,6 @@
 import { fetchGames, fetchGamesCount } from '../share/models/games';
-import type { GameFilters, GameListItem, GameOrigin } from '../share/types/game';
+import type { GameFilters, GameListItem } from '../share/types/game';
+import { filtersFromParams } from '../share/utils/filters';
 
 /** Data shape returned by the index page controller and forwarded to the React island. */
 export interface IndexPageData {
@@ -11,15 +12,6 @@ export interface IndexPageData {
     filters: GameFilters;
 }
 
-/** ?origin=human | ai_assisted (casse indifférente) → valeur du filtre, undefined sinon. */
-function parseOrigin(value: string | null): GameOrigin | undefined {
-    switch (value?.toUpperCase()) {
-        case 'HUMAN':       return 'HUMAN';
-        case 'AI_ASSISTED': return 'AI_ASSISTED';
-        default:            return undefined;
-    }
-}
-
 /**
  * Reads the URL search params, fetches games and total count from the API.
  *
@@ -27,12 +19,7 @@ function parseOrigin(value: string | null): GameOrigin | undefined {
  * @returns   - Games, total count and active filters for the index page.
  */
 export async function getIndexData(url: URL): Promise<IndexPageData> {
-    const filters: GameFilters = {
-        search:     url.searchParams.get('search') ?? '',
-        categories: url.searchParams.getAll('categories'),
-        years:      url.searchParams.getAll('years').map(Number).filter(Boolean),
-        origin:     parseOrigin(url.searchParams.get('origin')),
-    };
+    const filters = filtersFromParams(url.searchParams);
 
     const [games, total] = await Promise.all([
         fetchGames(filters, 50, 0),
