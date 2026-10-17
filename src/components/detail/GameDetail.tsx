@@ -458,6 +458,11 @@ export default function GameDetail({ game }: Props) {
                         <h1 className="hero-title">{game.main_title}</h1>
                         <p className="hero-sub">{sub}</p>
                         <div className="hero-tags">
+                            {game.origin === 'AI_ASSISTED' && (
+                                <span className="hero-tag hero-tag--ai" title="Jeu réalisé avec l'aide d'une IA">
+                                    IA ASSISTÉ
+                                </span>
+                            )}
                             {Object.entries(boolMap).map(([k, on]) => (
                                 <span key={k} className={`hero-tag${on ? ' hero-tag--on' : ''}`}>
                                     {k}

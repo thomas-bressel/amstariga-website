@@ -147,3 +147,14 @@
     margin-top: 0.75rem;
     letter-spacing: 2px;
 }
+
+/* Jeu réalisé avec l'aide d'une IA */
+.carousel-ai-badge {
+    margin-left: 10px;
+    font-size: 0.6em;
+    letter-spacing: 1px;
+    padding: 1px 6px;
+    vertical-align: middle;
+    color: #c8a2ec;
+    border: 1px solid #c8a2ec;
+}

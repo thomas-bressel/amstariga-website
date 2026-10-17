@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchAvailableLanguages, fetchAvailableYears, fetchGames, fetchGamesCount } from '../../share/models/games';
-import type { GameFilters, GameListItem, Language } from '../../share/types/game';
+import type { GameFilters, GameListItem, GameOrigin, Language } from '../../share/types/game';
 import { thumbnailPath } from '../../share/utils/thumbnail';
 import Carousel from '../carousel/Carousel';
 import SearchBar from './SearchBar';
@@ -28,10 +28,17 @@ function loadFilters(): GameFilters | null {
             parent_categories: Array.isArray(f.parent_categories) ? f.parent_categories : [],
             child_categories:  Array.isArray(f.child_categories)  ? f.child_categories  : [],
             years:             Array.isArray(f.years) ? f.years.map(Number).filter(Boolean) : [],
+            origin:            f.origin === 'HUMAN' || f.origin === 'AI_ASSISTED' ? f.origin : undefined,
         };
     } catch { return null; }
 }
 
+
+/** Origine des jeux : classiques ou réalisés avec l'aide d'une IA. */
+const ORIGINS: { value: GameOrigin; label: string; icon: string }[] = [
+    { value: 'HUMAN',       label: 'HUMAIN',     icon: '👤' },
+    { value: 'AI_ASSISTED', label: 'IA ASSISTÉ', icon: '🤖' },
+];
 
 const PARENT_CATS: { name: string; icon: string }[] = [
     { name: 'JEU',            icon: '🎮' },
@@ -226,6 +233,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
             child_categories:  filters.child_categories,
             years:             filters.years,
             is_adult:          filters.is_adult,
+            origin:            filters.origin,
         }).then(langs => {
             setAvailableLanguages(langs);
             const validSet = new Set(langs.map(l => l.iso_code));
@@ -234,7 +242,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                 applyFilters({ ...filters, languages: (filters.languages ?? []).filter(l => validSet.has(l)) });
             }
         }).catch(() => {});
-    }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), JSON.stringify(filters.years), filters.is_adult]);
+    }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), JSON.stringify(filters.years), filters.is_adult, filters.origin]);
 
     // Recharge les années disponibles quand les catégories ou is_adult changent
     // et purge les années sélectionnées qui ne sont plus dans la liste
@@ -243,6 +251,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
             parent_categories: filters.parent_categories,
             child_categories:  filters.child_categories,
             is_adult:          filters.is_adult,
+            origin:            filters.origin,
         }).then(years => {
             setAvailableYears(years);
             const validSet = new Set(years);
@@ -252,13 +261,13 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                 applyFilters({ ...filters, years: cleaned });
             }
         }).catch(() => {});
-    }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), filters.is_adult]);
+    }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), filters.is_adult, filters.origin]);
 
     // On mount — refetch si des filtres sauvegardés sont actifs
     useEffect(() => {
         const saved = loadFilters();
         if (!saved) return;
-        const hasActive = (saved.categories?.length ?? 0) + (saved.years?.length ?? 0) + (saved.search ? 1 : 0) > 0;
+        const hasActive = (saved.categories?.length ?? 0) + (saved.years?.length ?? 0) + (saved.search ? 1 : 0) + (saved.origin ? 1 : 0) > 0;
         if (!hasActive) return;
         setIsLoading(true);
         Promise.all([
@@ -407,13 +416,19 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
         applyFilters({ ...filters, is_adult: filters.is_adult === true ? undefined : true });
     }
 
+    /** Toggles the origin filter (human / AI-assisted games); clicking the active one clears it. */
+    function toggleOrigin(origin: GameOrigin) {
+        applyFilters({ ...filters, origin: filters.origin === origin ? undefined : origin });
+    }
+
     /** Total number of active filter criteria (used for the badge counter). */
     const activeCount =
         (filters.parent_categories?.length ?? 0) +
         (filters.child_categories?.length  ?? 0) +
         (filters.languages?.length         ?? 0) +
         (filters.years?.length             ?? 0) +
-        (filters.is_adult !== undefined ? 1 : 0);
+        (filters.is_adult !== undefined ? 1 : 0) +
+        (filters.origin ? 1 : 0);
 
     useEffect(() => {
         window.dispatchEvent(new CustomEvent('retro:filter-count', { detail: { count: activeCount } }));
@@ -477,6 +492,12 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                                 🔞 ADULT <span className="atag-x">&times;</span>
                             </span>
                         )}
+                        {filters.origin && (
+                            <span className="atag" onClick={() => toggleOrigin(filters.origin!)}>
+                                {ORIGINS.find(o => o.value === filters.origin)?.icon} {ORIGINS.find(o => o.value === filters.origin)?.label}
+                                {' '}<span className="atag-x">&times;</span>
+                            </span>
+                        )}
                     </div>
                 )}
 
@@ -513,6 +534,9 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                                     loading="lazy"
                                     onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                                 />
+                                {game.origin === 'AI_ASSISTED' && (
+                                    <span className="ai-badge" title="Jeu réalisé avec l'aide d'une IA">IA</span>
+                                )}
                             </div>
                             <div className="game-info">
                                 <div className="game-title">{game.main_title}</div>
@@ -561,6 +585,19 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                                     <span className="cat-ico">🔞</span>
                                     ADULT
                                 </button>
+                            </div>
+                            <div className="sheet-section-lbl">🤖 Origine</div>
+                            <div className="cat-grid">
+                                {ORIGINS.map(({ value, label, icon }) => (
+                                    <button
+                                        key={value}
+                                        className={`cat-btn ${filters.origin === value ? 'active' : ''}`}
+                                        onClick={() => toggleOrigin(value)}
+                                    >
+                                        <span className="cat-ico">{icon}</span>
+                                        {label}
+                                    </button>
+                                ))}
                             </div>
                             {visibleGenres.length > 0 && (
                                 <>
