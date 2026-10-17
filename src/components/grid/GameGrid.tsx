@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchAvailableLanguages, fetchAvailableYears, fetchGames, fetchGamesCount } from '../../share/models/games';
 import type { GameFilters, GameListItem, GameOrigin, Language } from '../../share/types/game';
+import { FILTER_PARAMS, hasActiveFilters } from '../../share/utils/filters';
 import { thumbnailPath } from '../../share/utils/thumbnail';
 import Carousel from '../carousel/Carousel';
 import SearchBar from './SearchBar';
@@ -27,7 +28,9 @@ function loadFilters(): GameFilters | null {
             search:            typeof f.search === 'string' ? f.search : '',
             parent_categories: Array.isArray(f.parent_categories) ? f.parent_categories : [],
             child_categories:  Array.isArray(f.child_categories)  ? f.child_categories  : [],
+            languages:         Array.isArray(f.languages) ? f.languages.filter(l => typeof l === 'string') : [],
             years:             Array.isArray(f.years) ? f.years.map(Number).filter(Boolean) : [],
+            is_adult:          f.is_adult === true ? true : undefined,
             origin:            f.origin === 'HUMAN' || f.origin === 'AI_ASSISTED' ? f.origin : undefined,
         };
     } catch { return null; }
@@ -119,8 +122,10 @@ const LANG_FLAGS: Record<string, string> = {
 interface Props {
     /** Initial games loaded by SSR (first 50). */
     initialGames: GameListItem[];
-    /** Total count matching no filters (from SSR). */
+    /** Total count matching the URL filters (from SSR). */
     initialTotal: number;
+    /** Filters given in the page URL (?search=…), already applied by SSR to the two props above. */
+    initialFilters?: GameFilters;
 }
 
 // ---------------------------------------------------------------------------
@@ -132,18 +137,22 @@ interface Props {
  * and a toggle between the 3-D carousel view and the flat grid view.
  *
  * State management:
- * - `games` / `offset` — accumulate batches as the user scrolls
- * - `filters` — shared by the chip bar, the active-filters strip, and the bottom sheet
+ * - `games` — accumulate batches as the user scrolls (`offsetRef` / `hasMoreRef`)
+ * - `filters` — filters of the displayed list, shared by the chip bar, the active-filters
+ *   strip, and the bottom sheet
+ * - `searchText` — text of the search bar, applied to the list on submit (or with any
+ *   other filter change)
  * - `view` — `'cover'` (carousel, default) or `'grid'`
  *
  * Cross-component communication (custom events on `window`):
  * - Dispatches `retro:count-update` when `total` changes → updates {@link TapeCounter}
  * - Listens to `retro:view-change` → switches between carousel and grid
  *
- * @param initialGames - First batch of games pre-rendered by SSR.
- * @param initialTotal - Total matching game count pre-rendered by SSR.
+ * @param initialGames   - First batch of games pre-rendered by SSR.
+ * @param initialTotal   - Total matching game count pre-rendered by SSR.
+ * @param initialFilters - Filters of the page URL, used instead of the saved ones.
  */
-export default function GameGrid({ initialGames, initialTotal }: Props) {
+export default function GameGrid({ initialGames, initialTotal, initialFilters }: Props) {
     const [games, setGames]         = useState<GameListItem[]>(initialGames);
     const [total, setTotal]         = useState(initialTotal);
 
@@ -158,10 +167,14 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
         window.addEventListener('retro:open-filters', handler);
         return () => window.removeEventListener('retro:open-filters', handler);
     }, []);
-    const [offset, setOffset]       = useState(initialGames.length);
-    const [hasMore, setHasMore]     = useState(initialGames.length === BATCH_SIZE);
     const [isLoading, setIsLoading] = useState(false);
-    const [filters, setFilters]     = useState<GameFilters>(() => loadFilters() ?? { parent_categories: [], child_categories: [], years: [] });
+    // Filtres de l'URL (déjà appliqués par le SSR), sinon ceux mémorisés à la dernière visite
+    const [filters, setFilters]     = useState<GameFilters>(() =>
+        (initialFilters && hasActiveFilters(initialFilters) ? initialFilters : loadFilters())
+        ?? { parent_categories: [], child_categories: [], years: [] });
+    const [searchText, setSearchText] = useState(filters.search ?? '');
+    // Change à chaque nouvelle liste : le carrousel repart alors de l'index mémorisé
+    const [listId, setListId]       = useState(0);
     const [availableYears, setAvailableYears]         = useState<number[]>([]);
     const [availableLanguages, setAvailableLanguages] = useState<Language[]>([]);
     const [sheetOpen, setSheetOpen] = useState(false);
@@ -195,7 +208,11 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
 
     const sentinelRef   = useRef<HTMLDivElement>(null);
     const filtersRef    = useRef<GameFilters>(filters);
-    const offsetRef     = useRef(offset);
+    const offsetRef     = useRef(initialGames.length);
+    const hasMoreRef    = useRef(initialGames.length === BATCH_SIZE);
+    const loadingRef    = useRef(false);
+    // Incrémenté à chaque nouvelle liste : les réponses arrivées pour une liste précédente sont ignorées
+    const generationRef = useRef(0);
     const stickyRef     = useRef<HTMLDivElement>(null);
     const [stickyH, setStickyH] = useState(0);
 
@@ -207,9 +224,8 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
         return () => obs.disconnect();
     }, []);
 
-    // Keep refs in sync so the IntersectionObserver callback sees fresh values.
+    // Keep the ref in sync so the IntersectionObserver callback sees fresh values.
     filtersRef.current = filters;
-    offsetRef.current  = offset;
 
     // On mount — écoute le signal de boot ou affiche immédiatement pour les visiteurs de retour
     useEffect(() => {
@@ -228,6 +244,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     // Recharge les langues disponibles quand les catégories changent
     // et purge les langues sélectionnées qui ne sont plus disponibles
     useEffect(() => {
+        let stale = false;
         fetchAvailableLanguages({
             parent_categories: filters.parent_categories,
             child_categories:  filters.child_categories,
@@ -235,51 +252,56 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
             is_adult:          filters.is_adult,
             origin:            filters.origin,
         }).then(langs => {
+            if (stale) return;
             setAvailableLanguages(langs);
             const validSet = new Set(langs.map(l => l.iso_code));
-            const invalidLangs = (filters.languages ?? []).filter(l => !validSet.has(l));
+            const current  = filtersRef.current;
+            const invalidLangs = (current.languages ?? []).filter(l => !validSet.has(l));
             if (invalidLangs.length > 0) {
-                applyFilters({ ...filters, languages: (filters.languages ?? []).filter(l => validSet.has(l)) });
+                applyFilters({ ...current, languages: (current.languages ?? []).filter(l => validSet.has(l)) });
             }
         }).catch(() => {});
+        return () => { stale = true; };
     }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), JSON.stringify(filters.years), filters.is_adult, filters.origin]);
 
     // Recharge les années disponibles quand les catégories ou is_adult changent
     // et purge les années sélectionnées qui ne sont plus dans la liste
     useEffect(() => {
+        let stale = false;
         fetchAvailableYears({
             parent_categories: filters.parent_categories,
             child_categories:  filters.child_categories,
             is_adult:          filters.is_adult,
             origin:            filters.origin,
         }).then(years => {
+            if (stale) return;
             setAvailableYears(years);
             const validSet = new Set(years);
-            const invalidYears = (filters.years ?? []).filter(y => !validSet.has(y));
+            const current  = filtersRef.current;
+            const invalidYears = (current.years ?? []).filter(y => !validSet.has(y));
             if (invalidYears.length > 0) {
-                const cleaned = (filters.years ?? []).filter(y => validSet.has(y));
-                applyFilters({ ...filters, years: cleaned });
+                const cleaned = (current.years ?? []).filter(y => validSet.has(y));
+                applyFilters({ ...current, years: cleaned });
             }
         }).catch(() => {});
+        return () => { stale = true; };
     }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), filters.is_adult, filters.origin]);
 
-    // On mount — refetch si des filtres sauvegardés sont actifs
+    // On mount — filtres de l'URL : déjà appliqués par le SSR, ils deviennent les filtres mémorisés
+    // et quittent l'URL (recharger la page les réappliquerait sinon par-dessus les choix suivants).
+    // Sinon, filtres mémorisés : la liste du SSR, sans filtre, est rechargée avec eux.
     useEffect(() => {
+        if (initialFilters && hasActiveFilters(initialFilters)) {
+            saveFilters(initialFilters);
+            resetPosition();
+            setListId(id => id + 1);
+            const url = new URL(window.location.href);
+            FILTER_PARAMS.forEach(p => url.searchParams.delete(p));
+            window.history.replaceState(window.history.state, '', url);
+            return;
+        }
         const saved = loadFilters();
-        if (!saved) return;
-        const hasActive = (saved.categories?.length ?? 0) + (saved.years?.length ?? 0) + (saved.search ? 1 : 0) + (saved.origin ? 1 : 0) > 0;
-        if (!hasActive) return;
-        setIsLoading(true);
-        Promise.all([
-            fetchGames(saved, BATCH_SIZE, 0),
-            fetchGamesCount(saved),
-        ]).then(([batch, count]) => {
-            const safeBatch = batch ?? [];
-            setGames(safeBatch);
-            setTotal(count);
-            setOffset(safeBatch.length);
-            setHasMore(safeBatch.length === BATCH_SIZE);
-        }).finally(() => setIsLoading(false));
+        if (saved && hasActiveFilters(saved)) applyFilters(saved, true);
     }, []);
 
     // IntersectionObserver on the sentinel element at the bottom of the list
@@ -311,47 +333,84 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     /**
      * Fetches the next batch of games and appends them to the list.
      * No-ops when a request is already in flight or there are no more results.
+     * Refs only: the IntersectionObserver keeps the closure of its first render.
      */
     async function loadMore() {
-        if (isLoading || !hasMore) return;
+        if (loadingRef.current || !hasMoreRef.current) return;
+        const generation = generationRef.current;
+        loadingRef.current = true;
         setIsLoading(true);
         try {
             const batch = await fetchGames(filtersRef.current, BATCH_SIZE, offsetRef.current) ?? [];
-            if (!batch.length) {
-                setHasMore(false);
-                return;
-            }
-            setGames(prev => [...prev, ...batch]);
-            setOffset(prev => prev + batch.length);
-            setHasMore(batch.length === BATCH_SIZE);
+            // Filtres changés entre-temps : ce lot appartient à l'ancienne liste
+            if (generation !== generationRef.current) return;
+            offsetRef.current += batch.length;
+            hasMoreRef.current = batch.length === BATCH_SIZE;
+            if (batch.length) setGames(prev => [...prev, ...batch]);
         } finally {
-            setIsLoading(false);
+            if (generation === generationRef.current) {
+                loadingRef.current = false;
+                setIsLoading(false);
+            }
         }
     }
 
     /**
      * Replaces the current game list with a fresh fetch using the given filters.
-     * Resets offset and `hasMore` so infinite scroll restarts from the beginning.
+     * Resets the pagination so infinite scroll restarts from the beginning; responses
+     * of requests started for a previous list (older search, next batch) are ignored.
      *
-     * @param next - The new filter state to apply.
+     * @param next    - The new filter state to apply.
+     * @param restore - true when restoring the saved filters on load: the grid scroll
+     *                  position and the carousel index of the last visit are kept.
      */
-    async function applyFilters(next: GameFilters) {
-        setFilters(next);
-        saveFilters(next);
+    async function applyFilters(next: GameFilters, restore = false) {
+        const applied = { ...next, search: (next.search ?? '').trim() };
+        if (applied.search !== (filtersRef.current.search ?? '')) setSearchText(applied.search);
+        filtersRef.current = applied;
+        setFilters(applied);
+        saveFilters(applied);
+        const generation = ++generationRef.current;
+        loadingRef.current = true;
         setIsLoading(true);
         try {
             const [batch, count] = await Promise.all([
-                fetchGames(next, BATCH_SIZE, 0),
-                fetchGamesCount(next),
+                fetchGames(applied, BATCH_SIZE, 0),
+                fetchGamesCount(applied),
             ]);
+            if (generation !== generationRef.current) return;
             const safeBatch = batch ?? [];
+            offsetRef.current  = safeBatch.length;
+            hasMoreRef.current = safeBatch.length === BATCH_SIZE;
+            if (!restore) resetPosition();
             setGames(safeBatch);
             setTotal(count);
-            setOffset(safeBatch.length);
-            setHasMore(safeBatch.length === BATCH_SIZE);
+            setListId(id => id + 1);
         } finally {
-            setIsLoading(false);
+            if (generation === generationRef.current) {
+                loadingRef.current = false;
+                setIsLoading(false);
+            }
         }
+    }
+
+    /** New list: the grid goes back to the top and the carousel to the first game. */
+    function resetPosition() {
+        try {
+            localStorage.setItem(LS_SCROLL, '0');
+            localStorage.setItem(LS_CAROUSEL, '0');
+        } catch {}
+        window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    /**
+     * Applies a change to the filters together with the text of the search bar, so that
+     * the list always matches what the search bar shows.
+     *
+     * @param changes - The filters to change.
+     */
+    function updateFilters(changes: GameFilters) {
+        applyFilters({ ...filters, search: searchText, ...changes });
     }
 
     /**
@@ -367,8 +426,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
             if (parents.includes(cat)) {
                 // Déselection d'un type : retirer le type ET ses genres enfants
                 const itsChildren = new Set((CHILD_CATS[cat] ?? []).map(c => c.name));
-                applyFilters({
-                    ...filters,
+                updateFilters({
                     parent_categories: parents.filter(p => p !== cat),
                     child_categories:  children.filter(c => !itsChildren.has(c)),
                 });
@@ -376,8 +434,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
                 // Sélection d'un nouveau type : purger les genres qui n'appartiennent plus aux types restants
                 const nextParents     = [...parents, cat];
                 const allowedChildren = new Set(nextParents.flatMap(p => (CHILD_CATS[p] ?? []).map(c => c.name)));
-                applyFilters({
-                    ...filters,
+                updateFilters({
                     parent_categories: nextParents,
                     child_categories:  children.filter(c => allowedChildren.has(c)),
                 });
@@ -385,7 +442,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
         } else {
             // Genre enfant — toggle simple
             const next = children.includes(cat) ? children.filter(c => c !== cat) : [...children, cat];
-            applyFilters({ ...filters, child_categories: next });
+            updateFilters({ child_categories: next });
         }
     }
 
@@ -397,28 +454,29 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
     function toggleYear(year: number) {
         const years = filters.years ?? [];
         const next  = years.includes(year) ? years.filter(y => y !== year) : [...years, year];
-        applyFilters({ ...filters, years: next });
+        updateFilters({ years: next });
     }
 
     function toggleLanguage(iso: string) {
         const langs = filters.languages ?? [];
         const next  = langs.includes(iso) ? langs.filter(l => l !== iso) : [...langs, iso];
-        applyFilters({ ...filters, languages: next });
+        updateFilters({ languages: next });
     }
 
-    /** Clears all active filters and reloads the full game list. */
+    /** Clears all active filters and the search bar, and reloads the full game list. */
     function resetFilters() {
         try { localStorage.removeItem(LS_KEY); } catch {}
+        setSearchText('');
         applyFilters({ parent_categories: [], child_categories: [], languages: [], years: [] });
     }
 
     function toggleAdult() {
-        applyFilters({ ...filters, is_adult: filters.is_adult === true ? undefined : true });
+        updateFilters({ is_adult: filters.is_adult === true ? undefined : true });
     }
 
     /** Toggles the origin filter (human / AI-assisted games); clicking the active one clears it. */
     function toggleOrigin(origin: GameOrigin) {
-        applyFilters({ ...filters, origin: filters.origin === origin ? undefined : origin });
+        updateFilters({ origin: filters.origin === origin ? undefined : origin });
     }
 
     /** Total number of active filter criteria (used for the badge counter). */
@@ -503,10 +561,10 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
 
                 {/* ── Search bar ── */}
                 <SearchBar
-                    value={filters.search ?? ''}
+                    value={searchText}
                     filters={filters}
-                    onChange={val => setFilters(f => ({ ...f, search: val }))}
-                    onSubmit={val => applyFilters({ ...filters, search: val })}
+                    onChange={setSearchText}
+                    onSubmit={term => updateFilters({ search: term })}
                 />
             </div>
 
@@ -518,6 +576,7 @@ export default function GameGrid({ initialGames, initialTotal }: Props) {
             {view === 'cover' ? (
                 <Carousel
                     games={games}
+                    listId={listId}
                     total={total}
                     initialIndex={(() => { try { return parseInt(localStorage.getItem(LS_CAROUSEL) ?? '0', 10) || 0; } catch { return 0; } })()}
                     topOffset={stickyH}
