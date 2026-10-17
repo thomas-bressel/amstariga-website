@@ -52,6 +52,30 @@ export interface GameDump {
     status?:         string;
     comment?:        string;
     protection?:     string;
+    /** Fichier présent sur le serveur : adresse de téléchargement (/uploads/…). */
+    url?:            string;
+    /** Taille du fichier présent sur le serveur, en octets. */
+    size?:           number;
+}
+
+/** Fichier d'un jeu présent sur le serveur. */
+export interface GameFile {
+    name:    string;
+    /** Adresse sur le site : /uploads/… */
+    url:     string;
+    size:    number;
+    /** Dossier de la release (D7_UK_original…). */
+    folder?: string;
+}
+
+/** Fichiers du dossier du jeu sur le serveur (absents si le jeu n'en a aucun). */
+export interface GameFiles {
+    thumbnail?: string;
+    /** Scans de boîte, cartouche, étiquette… */
+    scans?:     GameFile[];
+    manuals?:   GameFile[];
+    /** Fichiers des releases (.dsk, .cdt, .cpr…). */
+    releases?:  GameFile[];
 }
 
 export interface GameComment {
@@ -89,4 +113,5 @@ export interface Game extends GameListItem {
     comments?:     GameComment[];
     screenshots?:       string[];
     compilation_games?: CompilationGame[];
+    files?:             GameFiles;
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchGames } from '../../share/models/games';
-import type { Game, GameDump, GameAuthor, GameComment } from '../../share/types/game';
+import type { Game, GameDump, GameAuthor, GameComment, GameFile } from '../../share/types/game';
 
 interface Props {
     game: Game;
@@ -10,6 +10,8 @@ interface Props {
 const PLATE_LAYOUT = [
     { key: 'info',        label: 'SYSTEM_IDENTITY',   size: 'span-2 row-2' },
     { key: 'dump',        label: 'DISK_ARCHIVE',      size: 'span-2'       },
+    { key: 'scans',       label: 'PACKAGING_SCANS',   size: 'span-2'       },
+    { key: 'manual',      label: 'MANUAL_FILE',       size: ''             },
     { key: 'compilation', label: 'COMPILATIONS',      size: 'span-2'       },
     { key: 'compil_d7',   label: 'COMPILATION D7',    size: 'span-2'       },
     { key: 'compil_k7',   label: 'COMPILATION K7',    size: 'span-2'       },
@@ -33,6 +35,42 @@ function splitDumps(game: Game): { direct: GameDump[]; compilation: GameDump[] }
     return { direct, compilation };
 }
 
+/** Dumps propres au jeu (une compilation montre les siens dans ses plaques D7 / K7) */
+function ownDumps(game: Game): GameDump[] {
+    return isCompilation(game) ? [] : splitDumps(game).direct;
+}
+
+/** Fichiers des releases présents sur le serveur sans dump correspondant dans la base */
+function otherReleaseFiles(game: Game): GameFile[] {
+    const linked = new Set((game.dumps ?? []).map(d => d.url).filter(Boolean));
+    return (game.files?.releases ?? []).filter(f => !linked.has(f.url));
+}
+
+/** Taille lisible : 512 Ko, 1,3 Mo */
+function formatSize(bytes: number): string {
+    if (bytes < 1024)        return `${bytes} o`;
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} Ko`;
+    return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
+}
+
+/** Ligne d'un fichier, avec son lien de téléchargement quand il est sur le serveur
+ *  (viewable : lien « ouvrir » en plus, pour un manuel lisible dans le navigateur) */
+function FileLine({ name, url, size, viewable }: { name: string; url?: string; size?: number; viewable?: boolean }) {
+    return (
+        <p className="file-line">
+            <span>FILE : {name}</span>
+            {url && viewable && (
+                <a className="file-download" href={url} target="_blank" rel="noopener noreferrer">⧉ OUVRIR</a>
+            )}
+            {url && (
+                <a className="file-download" href={url} download={name}>
+                    ⇩ TÉLÉCHARGER{size != null && <span className="file-size"> · {formatSize(size)}</span>}
+                </a>
+            )}
+        </p>
+    );
+}
+
 /** Extrait les titres de jeux uniques depuis les file_name K7 (pattern "(N. Titre)") */
 function extractK7Games(dumps: GameDump[]): string[] {
     const seen = new Set<string>();
@@ -49,7 +87,9 @@ function extractK7Games(dumps: GameDump[]): string[] {
 function hasData(key: string, game: Game): boolean {
     if (key === 'info')        return true;
     // plaques jeu normal
-    if (key === 'dump')        return !isCompilation(game) && splitDumps(game).direct.length > 0;
+    if (key === 'dump')        return ownDumps(game).length > 0 || otherReleaseFiles(game).length > 0;
+    if (key === 'scans')       return (game.files?.scans?.length   ?? 0) > 0;
+    if (key === 'manual')      return (game.files?.manuals?.length ?? 0) > 0;
     if (key === 'compilation') return !isCompilation(game) && splitDumps(game).compilation.length > 0;
     // plaques compilation
     if (key === 'compil_d7')   return isCompilation(game) && (game.dumps ?? []).some(d => d.category.startsWith('D7'));
@@ -89,9 +129,29 @@ function PlatePreview({ plateKey, game }: { plateKey: string; game: Game }) {
         );
     }
     if (plateKey === 'dump') {
-        const { direct } = splitDumps(game);
-        const types = [...new Set(direct.map(d => d.category))].join(' · ');
-        return <div className="plate-empty">{types} — {direct.length} fichier(s)</div>;
+        const dumps     = ownDumps(game);
+        const others    = otherReleaseFiles(game);
+        const types     = [...new Set(dumps.map(d => d.category))].join(' · ');
+        const downloads = dumps.filter(d => d.url).length + others.length;
+        return (
+            <div className="plate-empty">
+                {types && `${types} — `}{dumps.length + others.length} fichier(s)
+                {downloads > 0 && ` · ${downloads} téléchargeable(s)`}
+            </div>
+        );
+    }
+    if (plateKey === 'scans') {
+        return (
+            <div className="scan-strip">
+                {(game.files?.scans ?? []).slice(0, 4).map(s => (
+                    <img key={s.url} src={s.url} alt={s.name} loading="lazy" />
+                ))}
+            </div>
+        );
+    }
+    if (plateKey === 'manual') {
+        const manuals = game.files?.manuals ?? [];
+        return <div className="plate-empty">{manuals.length} manuel(s) · {manuals.map(m => m.name).join(', ')}</div>;
     }
     if (plateKey === 'compilation') {
         const { compilation } = splitDumps(game);
@@ -206,13 +266,13 @@ function CompilD7Modal({ game }: { game: Game }) {
                                 <a href={`/game/${m.id}`} style={{ color: 'var(--accent)', textDecoration: 'none' }}>→ {m.title}</a>
                             </h3>
                             {faces.map((d, j) => (
-                                <p key={j} style={{ marginBottom: '4px' }}>FILE : {d.file_name}</p>
+                                <FileLine key={j} name={d.file_name} url={d.url} size={d.size} />
                             ))}
                         </div>
                     );
                 })}
                 {unmatched.map((d, i) => (
-                    <p key={i} style={{ marginBottom: '4px' }}>FILE : {d.file_name}</p>
+                    <FileLine key={i} name={d.file_name} url={d.url} size={d.size} />
                 ))}
             </>
         );
@@ -225,7 +285,7 @@ function CompilD7Modal({ game }: { game: Game }) {
             {command && <p style={{ marginBottom: '1.5rem' }}>COMMANDE : <code>{command}</code></p>}
             <div className="dump-block">
                 {dumps.map((d, i) => (
-                    <p key={i} style={{ marginBottom: '4px' }}>FILE : {d.file_name}</p>
+                    <FileLine key={i} name={d.file_name} url={d.url} size={d.size} />
                 ))}
             </div>
         </>
@@ -271,13 +331,13 @@ function CompilK7Modal({ game }: { game: Game }) {
                                 <a href={`/game/${m.id}`} style={{ color: 'var(--accent)', textDecoration: 'none' }}>→ {m.title}</a>
                             </h3>
                             {faces.map((d, j) => (
-                                <p key={j} style={{ marginBottom: '4px' }}>FILE : {d.file_name}</p>
+                                <FileLine key={j} name={d.file_name} url={d.url} size={d.size} />
                             ))}
                         </div>
                     );
                 })}
                 {unmatched.map((d, i) => (
-                    <p key={i} style={{ marginBottom: '4px' }}>FILE : {d.file_name}</p>
+                    <FileLine key={i} name={d.file_name} url={d.url} size={d.size} />
                 ))}
             </>
         );
@@ -290,7 +350,7 @@ function CompilK7Modal({ game }: { game: Game }) {
             {command && <p style={{ marginBottom: '1.5rem' }}>COMMANDE : <code>{command}</code></p>}
             <div className="dump-block">
                 {dumps.map((d, i) => (
-                    <p key={i} style={{ marginBottom: '4px' }}>FILE : {d.file_name}</p>
+                    <FileLine key={i} name={d.file_name} url={d.url} size={d.size} />
                 ))}
             </div>
         </>
@@ -329,12 +389,12 @@ function ModalContent({ plateKey, game }: { plateKey: string; game: Game }) {
     }
 
     if (plateKey === 'dump') {
-        const { direct } = splitDumps(game);
         const groups: Record<string, GameDump[]> = {};
-        for (const d of direct) {
+        for (const d of ownDumps(game)) {
             if (!groups[d.category]) groups[d.category] = [];
             groups[d.category].push(d);
         }
+        const others = otherReleaseFiles(game);
         return (
             <>
                 <h2 className="modal-section-title">DISK_DUMP_REPORT</h2>
@@ -343,13 +403,56 @@ function ModalContent({ plateKey, game }: { plateKey: string; game: Game }) {
                         <h3 className="dump-label">{category}</h3>
                         {items.map((d, i) => (
                             <div key={i} style={{ marginBottom: i < items.length - 1 ? '0.75rem' : 0 }}>
-                                <p>FILE : {d.file_name}</p>
+                                <FileLine name={d.file_name} url={d.url} size={d.size} />
                                 {d.loading_command && <p>COMMANDE : <code>{d.loading_command}</code></p>}
                                 {d.protection      && <p>PROTECTION : {d.protection}</p>}
                             </div>
                         ))}
                     </div>
                 ))}
+                {others.length > 0 && (
+                    <div className="dump-block">
+                        <h3 className="dump-label">AUTRES FICHIERS</h3>
+                        {others.map(f => <FileLine key={f.url} name={f.name} url={f.url} size={f.size} />)}
+                    </div>
+                )}
+            </>
+        );
+    }
+
+    if (plateKey === 'scans') {
+        return (
+            <>
+                <h2 className="modal-section-title">PACKAGING_SCANS</h2>
+                <div className="scan-gallery">
+                    {(game.files?.scans ?? []).map(s => (
+                        <a key={s.url} className="scan-item" href={s.url} target="_blank" rel="noopener noreferrer">
+                            <img src={s.url} alt={s.name} loading="lazy" />
+                            <span>{s.name}</span>
+                        </a>
+                    ))}
+                </div>
+            </>
+        );
+    }
+
+    if (plateKey === 'manual') {
+        const manuals = game.files?.manuals ?? [];
+        const pdf     = manuals.find(m => m.name.toLowerCase().endsWith('.pdf'));
+        return (
+            <>
+                <h2 className="modal-section-title">MANUAL_FILE</h2>
+                <div className="dump-block">
+                    {manuals.map(m => <FileLine key={m.url} name={m.name} url={m.url} size={m.size} viewable />)}
+                </div>
+                {pdf && (
+                    <object className="manual-viewer" data={pdf.url} type="application/pdf" aria-label={pdf.name}>
+                        <p className="manual-fallback">
+                            Aperçu indisponible dans ce navigateur :{' '}
+                            <a href={pdf.url} target="_blank" rel="noopener noreferrer">ouvrir {pdf.name}</a>
+                        </p>
+                    </object>
+                )}
             </>
         );
     }
@@ -424,8 +527,13 @@ export default function GameDetail({ game }: Props) {
     const catStr   = game.categories?.length ? ' · ' + game.categories[0] : '';
     const sub      = `${yearStr} — ${edStr}${catStr}`;
 
+    const cover = game.files?.thumbnail ?? game.files?.scans?.[0]?.url;
+
     const boolMap: Record<string, boolean> = {
         DUMP:     (game.dumps?.length    ?? 0) > 0,
+        DOWNLOAD: (game.dumps ?? []).some(d => d.url) || otherReleaseFiles(game).length > 0,
+        SCANS:    (game.files?.scans?.length   ?? 0) > 0,
+        MANUAL:   (game.files?.manuals?.length ?? 0) > 0,
         TIPS:     (game.tips?.length     ?? 0) > 0,
         BUGS:     (game.bugs?.length     ?? 0) > 0,
         COMMENTS: (game.comments?.length ?? 0) > 0,
@@ -450,8 +558,8 @@ export default function GameDetail({ game }: Props) {
             {/* ── HERO ── */}
             <div className="game-hero" id="game-hero">
                 <div className="game-hero-inner">
-                    <div className="game-hero-cover">
-                        <span>📦</span>
+                    <div className={`game-hero-cover${cover ? ' game-hero-cover--image' : ''}`}>
+                        {cover ? <img src={cover} alt={game.main_title} /> : <span>📦</span>}
                     </div>
                     <div className="game-hero-meta">
                         <div className="hero-system-id">{systemId}</div>
