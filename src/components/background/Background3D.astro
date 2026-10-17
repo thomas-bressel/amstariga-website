@@ -9,25 +9,20 @@
  * The camera rotates slowly on the Y axis (auto-rotation) and follows
  * the mouse horizontally with a 0.05 lerp factor for a parallax feel.
  *
- * Dependencies (loaded via importmap, no npm install required):
+ * Dependencies (npm package `three`, bundled by Astro with the script):
  *   - three          — core WebGL renderer and scene graph
  *   - EXRLoader      — parses the .exr HDR panorama
  *   - EffectComposer — multi-pass post-processing pipeline
  *   - UnrealBloomPass— bloom glow effect
  *
+ * The script is processed by Astro (no `is:inline`, no `type`): an import map
+ * declared in the page would come after the module scripts of Vite / Astro,
+ * and browsers then refuse it ("Failed to resolve module specifier three").
+ *
  * Asset: /public/amstrad_world.exr — HDR panorama of the Amstrad retro scene.
  */
 ---
-<script type="importmap">
-{
-    "imports": {
-        "three": "https://unpkg.com/three@latest/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@latest/examples/jsm/"
-    }
-}
-</script>
-
-<script type="module">
+<script>
 import * as THREE from 'three';
 import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
@@ -80,16 +75,19 @@ new EXRLoader().load('/amstrad_world.exr', (texture) => {
 
 /* ── Mouse parallax ── */
 let mouseX = 0, targetX = 0;
-const clock = new THREE.Clock();
+/* THREE.Clock is deprecated since r183; connect() leaves out the time spent in a hidden tab */
+const timer = new THREE.Timer();
+timer.connect(document);
 
 window.addEventListener('mousemove', (e) => {
     mouseX = (e.clientX / window.innerWidth) - 0.5;
 });
 
 /* ── Render loop ── */
-function animate() {
+function animate(timestamp?: number) {
     requestAnimationFrame(animate);
-    const time = clock.getElapsedTime();
+    timer.update(timestamp);
+    const time = timer.getElapsed();
 
     /* Lerp towards mouse position + slow sine auto-rotation */
     targetX += (mouseX - targetX) * 0.05;
