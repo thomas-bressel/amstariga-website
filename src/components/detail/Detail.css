@@ -81,6 +81,21 @@
     clip-path: polygon(0 0, 94% 0, 100% 6%, 100% 100%, 6% 100%, 0 94%);
 }
 
+/* Vignette (capture d'écran 4:3) ou scan à la place du carton */
+.game-hero-cover.game-hero-cover--image {
+    width: auto;
+    aspect-ratio: 4 / 3;
+    background: #000;
+    overflow: hidden;
+}
+
+.game-hero-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
 .game-hero-meta {
     flex: 1;
 }
@@ -443,6 +458,96 @@
     font-style: italic;
     margin-top: 8px;
 }
+
+/* ── Fichiers téléchargeables ── */
+.file-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    margin: 0 0 6px;
+    overflow-wrap: anywhere;
+}
+
+.file-download {
+    font-family: 'Courier New', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 1px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 2px 8px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.2s, color 0.2s;
+}
+
+.file-download:hover {
+    background: var(--accent);
+    color: var(--accent-text);
+}
+
+.file-size { opacity: 0.75; }
+
+/* ── Scans de boîte : aperçu dans la plaque, galerie dans la modale ── */
+.scan-strip {
+    display: flex;
+    gap: 6px;
+    overflow: hidden;
+}
+
+.scan-strip img {
+    height: 96px;
+    width: auto;
+    max-width: 40%;
+    object-fit: contain;
+    background: #000;
+    border: 1px solid var(--border);
+}
+
+.scan-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+}
+
+.scan-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-decoration: none;
+    color: var(--text-dim);
+    font-family: 'Courier New', monospace;
+    font-size: 0.65rem;
+    overflow-wrap: anywhere;
+}
+
+.scan-item img {
+    width: 100%;
+    height: 240px;
+    object-fit: contain;
+    background: #000;
+    border: 1px solid var(--border);
+    transition: border-color 0.2s;
+}
+
+.scan-item:hover img { border-color: var(--accent); }
+
+/* ── Manuel PDF ── */
+.manual-viewer {
+    width: 100%;
+    height: 60vh;
+    border: 1px solid var(--border);
+    background: #000;
+}
+
+.manual-fallback {
+    padding: 1rem 1.25rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+
+.manual-fallback a { color: var(--accent); }
 
 .accent { color: var(--accent); }
 
