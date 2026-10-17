@@ -136,6 +136,14 @@
     background: rgba(var(--accent-rgb), 0.08);
 }
 
+/* Jeu réalisé avec l'aide d'une IA */
+.hero-tag--ai {
+    border-color: #c8a2ec;
+    color: #c8a2ec;
+    opacity: 1;
+    background: rgba(200, 162, 236, 0.08);
+}
+
 /* ============================================================
    BENTO PUZZLE
    ============================================================ */

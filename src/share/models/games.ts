@@ -37,6 +37,10 @@ function buildQS(filters: GameFilters, extra: Record<string, string | number> = 
         params.set('is_adult', String(filters.is_adult));
     }
 
+    if (filters.origin) {
+        params.set('origin', filters.origin);
+    }
+
     return params.toString();
 }
 

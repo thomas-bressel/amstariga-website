@@ -182,7 +182,12 @@ export default function Carousel({ games, total, initialIndex = 0, topOffset = 0
             </div>
 
             <div className="carousel-title-bar">
-                <span className="carousel-game-title">{active.main_title}</span>
+                <span className="carousel-game-title">
+                    {active.main_title}
+                    {active.origin === 'AI_ASSISTED' && (
+                        <span className="carousel-ai-badge" title="Jeu réalisé avec l'aide d'une IA">IA</span>
+                    )}
+                </span>
                 <span className="carousel-game-sub">{active.release_year}</span>
             </div>
 

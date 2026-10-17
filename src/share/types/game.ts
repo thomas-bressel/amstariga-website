@@ -1,3 +1,6 @@
+/** Origine d'un jeu : HUMAN (classique) ou AI_ASSISTED (réalisé avec l'aide d'une IA). */
+export type GameOrigin = 'HUMAN' | 'AI_ASSISTED';
+
 /** Filters passed to all game queries. */
 export interface GameFilters {
     /** Free-text search on the game title. */
@@ -12,6 +15,8 @@ export interface GameFilters {
     years?: number[];
     /** Filter by adult content: true = only adult, false = exclude adult, undefined = all. */
     is_adult?: boolean;
+    /** Origine : jeux humains ou réalisés avec l'aide d'une IA ; undefined = tous. */
+    origin?: GameOrigin;
 }
 
 /** A single game as returned by GET /api/games. */
@@ -26,6 +31,12 @@ export interface GameListItem {
     category_parent?: string;
     /** Child category (e.g. "Action", "Plates-Formes"). */
     category_child?: string;
+    /** HUMAN ou AI_ASSISTED. */
+    origin?: GameOrigin;
+    /** Machine (slug) : amstrad, atari-st, amiga. */
+    machine?: string;
+    /** Nom de la machine (Amstrad CPC…). */
+    machine_name?: string;
 }
 
 export interface GameAuthor {
