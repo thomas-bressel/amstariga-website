@@ -35,6 +35,14 @@ function splitDumps(game: Game): { direct: GameDump[]; compilation: GameDump[] }
     return { direct, compilation };
 }
 
+/** Libellés des scans classés dans le backoffice */
+const SCAN_TYPES: Record<string, string> = {
+    cover_front: 'FACE AVANT',
+    cover_back:  'FACE ARRIÈRE',
+    media:       'SUPPORT',
+    inlay:       'JAQUETTE / ENCART',
+};
+
 /** Dumps propres au jeu (une compilation montre les siens dans ses plaques D7 / K7) */
 function ownDumps(game: Game): GameDump[] {
     return isCompilation(game) ? [] : splitDumps(game).direct;
@@ -428,7 +436,10 @@ function ModalContent({ plateKey, game }: { plateKey: string; game: Game }) {
                     {(game.files?.scans ?? []).map(s => (
                         <a key={s.url} className="scan-item" href={s.url} target="_blank" rel="noopener noreferrer">
                             <img src={s.url} alt={s.name} loading="lazy" />
-                            <span>{s.name}</span>
+                            <span className="scan-caption">
+                                {s.type && <strong>{SCAN_TYPES[s.type] ?? s.type}</strong>}
+                                {s.name}
+                            </span>
                         </a>
                     ))}
                 </div>

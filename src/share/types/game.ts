@@ -37,6 +37,8 @@ export interface GameListItem {
     machine?: string;
     /** Nom de la machine (Amstrad CPC…). */
     machine_name?: string;
+    /** Face avant vérifiée de la boîte (/uploads/…), absente si le jeu n'en a pas. */
+    cover?: string;
 }
 
 export interface GameAuthor {
@@ -66,6 +68,8 @@ export interface GameFile {
     size:    number;
     /** Dossier de la release (D7_UK_original…). */
     folder?: string;
+    /** Scan classé : cover_front, cover_back, media, inlay. */
+    type?: string;
 }
 
 /** Fichiers du dossier du jeu sur le serveur (absents si le jeu n'en a aucun). */
