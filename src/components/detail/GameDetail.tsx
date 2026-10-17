@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { fetchGames } from '../../share/models/games';
 import type { Game, GameDump, GameAuthor, GameComment } from '../../share/types/game';
 
 interface Props {
@@ -132,11 +133,9 @@ function CompilationModal({ game }: { game: Game }) {
     const [ids, setIds] = useState<Record<string, number | null>>({});
 
     useEffect(() => {
-        const apiBase = (typeof window !== 'undefined' ? (window as any).__PUBLIC_API_URL__ : '') ?? '';
         names.forEach(async name => {
             try {
-                const res  = await fetch(`/api/games?search=${encodeURIComponent(name)}&limit=1`);
-                const data = await res.json() as Array<{ id: number; main_title: string }>;
+                const data  = await fetchGames({ search: name }, 1);
                 const match = data.find(g => g.main_title.toLowerCase() === name.toLowerCase());
                 setIds(prev => ({ ...prev, [name]: match?.id ?? null }));
             } catch {
