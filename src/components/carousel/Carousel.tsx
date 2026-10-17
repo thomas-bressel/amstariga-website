@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameListItem } from '../../share/types/game';
+import { thumbnailPath } from '../../share/utils/thumbnail';
 import './Carousel.css';
 
 /** Angular step in degrees between adjacent carousel slots. */
@@ -10,6 +11,28 @@ function getLayout(width: number): { radius: number; slots: number[] } {
     if (width >= 1600) return { radius: 900, slots: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5] };
     if (width >= 1200) return { radius: 750, slots: [-4, -3, -2, -1, 0, 1, 2, 3, 4] };
     return                     { radius: 600, slots: [-3, -2, -1, 0, 1, 2, 3] };
+}
+
+/** Images to try for a game card: the front cover of the box, then the game thumbnail. */
+function coverSources(game: GameListItem): string[] {
+    return [game.cover, thumbnailPath(game)].filter((src): src is string => !!src);
+}
+
+/** Card picture: box front cover, else thumbnail, else the 📦 placeholder (missing or broken images). */
+function CoverImage({ game, failed, onFail }: { game: GameListItem; failed: Set<string>; onFail: (src: string) => void }) {
+    const src = coverSources(game).find(s => !failed.has(s));
+    if (!src) {
+        return <span className="carousel-placeholder">📦</span>;
+    }
+    return (
+        <img
+            className={`carousel-cover${src === game.cover ? ' is-box' : ''}`}
+            src={src}
+            alt={game.main_title}
+            draggable={false}
+            onError={() => onFail(src)}
+        />
+    );
 }
 
 /** Props for {@link Carousel}. */
@@ -52,6 +75,10 @@ export default function Carousel({ games, total, initialIndex = 0, topOffset = 0
     const wheelRef                  = useRef<HTMLDivElement>(null);
     const containerRef              = useRef<HTMLDivElement>(null);
     const touchStartX               = useRef(0);
+    const [failed, setFailed]       = useState<Set<string>>(() => new Set());
+    const markFailed = useCallback((src: string) => {
+        setFailed(prev => (prev.has(src) ? prev : new Set(prev).add(src)));
+    }, []);
 
     useEffect(() => {
         setLayout(getLayout(window.innerWidth));
@@ -183,7 +210,7 @@ export default function Carousel({ games, total, initialIndex = 0, topOffset = 0
                                 }}
                                 onClick={() => { window.location.href = `/game/${game.id}`; }}
                             >
-                                <span style={{ fontSize: '5rem', filter: 'drop-shadow(0 0 8px var(--accent))' }}>📦</span>
+                                <CoverImage game={game} failed={failed} onFail={markFailed} />
                             </div>
                         );
                     })}

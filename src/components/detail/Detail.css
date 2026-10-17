@@ -532,6 +532,17 @@
 
 .scan-item:hover img { border-color: var(--accent); }
 
+.scan-caption {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.scan-caption strong {
+    color: var(--accent);
+    letter-spacing: 1px;
+}
+
 /* ── Manuel PDF ── */
 .manual-viewer {
     width: 100%;

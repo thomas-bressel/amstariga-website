@@ -57,6 +57,22 @@
     transition: border-color 0.3s, box-shadow 0.3s, filter 0.3s;
 }
 
+/* Face avant de la boîte, sinon vignette du jeu, sinon carton */
+.carousel-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+    pointer-events: none;
+}
+
+.carousel-cover.is-box { object-fit: cover; }
+
+.carousel-placeholder {
+    font-size: 5rem;
+    filter: drop-shadow(0 0 8px var(--accent));
+}
+
 .carousel-shadow {
     position: absolute;
     width: 180px; height: 260px;
