@@ -57,6 +57,7 @@ function Reel({ digit }: { digit: number }) {
  *
  * Listens to the `retro:count-update` custom event dispatched by {@link GameGrid}
  * and animates each reel independently when the corresponding digit changes.
+ * On mount, asks for the current total with `retro:count-request`.
  *
  * @param initialValue - Game count pre-rendered by SSR; updated at runtime via event.
  */
@@ -68,6 +69,8 @@ export default function TapeCounter({ value: initialValue }: Props) {
             setValue((e as CustomEvent<{ count: number }>).detail.count);
         };
         window.addEventListener('retro:count-update', handler);
+        // The game list may have sent its total before this counter was listening
+        window.dispatchEvent(new CustomEvent('retro:count-request'));
         return () => window.removeEventListener('retro:count-update', handler);
     }, []);
 

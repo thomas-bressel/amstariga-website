@@ -144,21 +144,29 @@ interface Props {
  *   other filter change)
  * - `view` — `'cover'` (carousel, default) or `'grid'`
  *
+ * Rendered on the client only (`client:only` in index.astro): its initial state comes from
+ * localStorage (view, saved filters, carousel index), which the server cannot read, so a
+ * server render would never match the first client render (hydration error).
+ *
  * Cross-component communication (custom events on `window`):
- * - Dispatches `retro:count-update` when `total` changes → updates {@link TapeCounter}
+ * - Dispatches `retro:count-update` when `total` changes, or on `retro:count-request` → updates {@link TapeCounter}
  * - Listens to `retro:view-change` → switches between carousel and grid
  *
- * @param initialGames   - First batch of games pre-rendered by SSR.
- * @param initialTotal   - Total matching game count pre-rendered by SSR.
+ * @param initialGames   - First batch of games fetched by SSR.
+ * @param initialTotal   - Total matching game count fetched by SSR.
  * @param initialFilters - Filters of the page URL, used instead of the saved ones.
  */
 export default function GameGrid({ initialGames, initialTotal, initialFilters }: Props) {
     const [games, setGames]         = useState<GameListItem[]>(initialGames);
     const [total, setTotal]         = useState(initialTotal);
 
-    // Sync total to TapeCounter in header
+    // Sync total to TapeCounter in header, and send it again when the counter asks for it
+    // (the counter may start listening after this island has sent the first total)
     useEffect(() => {
-        window.dispatchEvent(new CustomEvent('retro:count-update', { detail: { count: total } }));
+        const send = () => window.dispatchEvent(new CustomEvent('retro:count-update', { detail: { count: total } }));
+        send();
+        window.addEventListener('retro:count-request', send);
+        return () => window.removeEventListener('retro:count-request', send);
     }, [total]);
 
     // Écoute le bouton FILTRES dans le header
