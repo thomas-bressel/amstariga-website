@@ -117,8 +117,19 @@ export interface Game extends GameListItem {
     dumps?:        GameDump[];
     tips?:         string[];
     bugs?:         string[];
+    /** Bugs détaillés : édition concernée et capture d'écran (remplace bugs). */
+    bug_reports?:  GameBug[];
     comments?:     GameComment[];
     screenshots?:       string[];
     compilation_games?: CompilationGame[];
     files?:             GameFiles;
+}
+
+/** Bug connu d'un jeu. */
+export interface GameBug {
+    description?: string;
+    /** Édition où il se produit (éditeur · année · région) ; absente : toutes les éditions. */
+    release?: string;
+    /** Capture d'écran sur le serveur (/uploads/…). */
+    screenshot?: string;
 }
