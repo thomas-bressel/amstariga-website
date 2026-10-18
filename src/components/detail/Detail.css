@@ -15,6 +15,7 @@
     --text-dim:  #cfc8bf;   /* 8.1:1 */
     --label:     #ffbaa9;   /* rouge brique éclairci, 8.1:1 */
     --ai:        #dcbcf7;   /* violet IA, 8:1 */
+    --iso:       #a8e6f5;   /* cyan 3D isométrique */
     --bug:       #ffb3b3;   /* 7.9:1 */
 }
 
@@ -218,6 +219,13 @@
     color: var(--ai);
     opacity: 1;
     background: rgba(200, 162, 236, 0.08);
+}
+
+.hero-tag--iso {
+    border-color: var(--iso);
+    color: var(--iso);
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.2);
 }
 
 /* ============================================================

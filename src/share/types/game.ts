@@ -17,6 +17,8 @@ export interface GameFilters {
     is_adult?: boolean;
     /** Origine : jeux humains ou réalisés avec l'aide d'une IA ; undefined = tous. */
     origin?: GameOrigin;
+    /** Jeux en 3D isométrique : true = seulement eux, undefined = tous. */
+    is_isometric?: boolean;
 }
 
 /** A single game as returned by GET /api/games. */
@@ -108,6 +110,7 @@ export interface Game extends GameListItem {
     synopsis?:     string;
     notes?:        string;
     is_adult?:     boolean;
+    is_isometric?: boolean;
     cpc_power_id?: number;
     categories?:   string[];
     authors?:      GameAuthor[];
