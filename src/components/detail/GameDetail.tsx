@@ -643,6 +643,9 @@ export default function GameDetail({ game }: Props) {
                             {game.origin === 'AI_ASSISTED' && (
                                 <li className="hero-tag hero-tag--ai">IA ASSISTÉ<span className="sr-only"> : jeu réalisé avec l’aide d’une IA</span></li>
                             )}
+                            {game.is_isometric && (
+                                <li className="hero-tag hero-tag--iso">3D ISOMÉTRIQUE<span className="sr-only"> : jeu en 3D isométrique</span></li>
+                            )}
                             {available.map(([label, on]) => (
                                 <li key={label} className={`hero-tag${on ? ' hero-tag--on' : ' hero-tag--off'}`}>
                                     <span aria-hidden="true">{on ? '✓ ' : '– '}</span>

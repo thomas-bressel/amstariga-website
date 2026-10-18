@@ -32,6 +32,7 @@ function loadFilters(): GameFilters | null {
             years:             Array.isArray(f.years) ? f.years.map(Number).filter(Boolean) : [],
             is_adult:          f.is_adult === true ? true : undefined,
             origin:            f.origin === 'HUMAN' || f.origin === 'AI_ASSISTED' ? f.origin : undefined,
+            is_isometric:      f.is_isometric === true ? true : undefined,
         };
     } catch { return null; }
 }
@@ -259,6 +260,7 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
             years:             filters.years,
             is_adult:          filters.is_adult,
             origin:            filters.origin,
+            is_isometric:      filters.is_isometric,
         }).then(langs => {
             if (stale) return;
             setAvailableLanguages(langs);
@@ -270,7 +272,7 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
             }
         }).catch(() => {});
         return () => { stale = true; };
-    }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), JSON.stringify(filters.years), filters.is_adult, filters.origin]);
+    }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), JSON.stringify(filters.years), filters.is_adult, filters.origin, filters.is_isometric]);
 
     // Recharge les années disponibles quand les catégories ou is_adult changent
     // et purge les années sélectionnées qui ne sont plus dans la liste
@@ -281,6 +283,7 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
             child_categories:  filters.child_categories,
             is_adult:          filters.is_adult,
             origin:            filters.origin,
+            is_isometric:      filters.is_isometric,
         }).then(years => {
             if (stale) return;
             setAvailableYears(years);
@@ -293,7 +296,7 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
             }
         }).catch(() => {});
         return () => { stale = true; };
-    }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), filters.is_adult, filters.origin]);
+    }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), filters.is_adult, filters.origin, filters.is_isometric]);
 
     // On mount — filtres de l'URL : déjà appliqués par le SSR, ils deviennent les filtres mémorisés
     // et quittent l'URL (recharger la page les réappliquerait sinon par-dessus les choix suivants).
@@ -482,6 +485,11 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
         updateFilters({ is_adult: filters.is_adult === true ? undefined : true });
     }
 
+    /** Toggles the isometric 3D filter: only isometric games, or all games. */
+    function toggleIsometric() {
+        updateFilters({ is_isometric: filters.is_isometric === true ? undefined : true });
+    }
+
     /** Toggles the origin filter (human / AI-assisted games); clicking the active one clears it. */
     function toggleOrigin(origin: GameOrigin) {
         updateFilters({ origin: filters.origin === origin ? undefined : origin });
@@ -494,7 +502,8 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
         (filters.languages?.length         ?? 0) +
         (filters.years?.length             ?? 0) +
         (filters.is_adult !== undefined ? 1 : 0) +
-        (filters.origin ? 1 : 0);
+        (filters.origin ? 1 : 0) +
+        (filters.is_isometric !== undefined ? 1 : 0);
 
     useEffect(() => {
         window.dispatchEvent(new CustomEvent('retro:filter-count', { detail: { count: activeCount } }));
@@ -562,6 +571,11 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
                             <span className="atag" onClick={() => toggleOrigin(filters.origin!)}>
                                 {ORIGINS.find(o => o.value === filters.origin)?.icon} {ORIGINS.find(o => o.value === filters.origin)?.label}
                                 {' '}<span className="atag-x">&times;</span>
+                            </span>
+                        )}
+                        {filters.is_isometric === true && (
+                            <span className="atag" onClick={toggleIsometric}>
+                                🧊 3D ISOMÉTRIQUE <span className="atag-x">&times;</span>
                             </span>
                         )}
                     </div>
@@ -665,6 +679,16 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
                                         {label}
                                     </button>
                                 ))}
+                            </div>
+                            <div className="sheet-section-lbl">🧊 Graphismes</div>
+                            <div className="cat-grid">
+                                <button
+                                    className={`cat-btn ${filters.is_isometric === true ? 'active' : ''}`}
+                                    onClick={toggleIsometric}
+                                >
+                                    <span className="cat-ico">🧊</span>
+                                    3D ISOMÉTRIQUE
+                                </button>
                             </div>
                             {visibleGenres.length > 0 && (
                                 <>
