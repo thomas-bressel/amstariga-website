@@ -780,10 +780,55 @@
     line-height: 1.6;
 }
 
-.bug-list {
-    color: var(--bug);
-    padding-left: 1.2rem;
+/* Bugs connus : description, édition concernée, capture d'écran */
+.bug-reports {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-width: 80ch;
 }
+
+.bug-report {
+    padding: 14px 18px;
+    border: 1px solid var(--border-hi);
+    border-left: 3px solid var(--bug);
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.bug-text {
+    color: var(--text);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.bug-text > span[aria-hidden] { color: var(--bug); }
+
+.bug-release {
+    margin-top: 6px;
+    color: var(--text-dim);
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+}
+
+.bug-shot {
+    display: inline-block;
+    margin-top: 12px;
+    max-width: 100%;
+}
+
+.bug-shot img {
+    display: block;
+    max-width: 100%;
+    max-height: 400px;
+    background: #000;
+    border: 1px solid var(--border);
+    transition: border-color 0.2s;
+}
+
+.bug-shot:hover img,
+.bug-shot:focus-visible img { border-color: var(--accent); }
 
 /* ── Bouton retour dans le header ── */
 .back-btn {
