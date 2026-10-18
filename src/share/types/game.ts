@@ -19,6 +19,8 @@ export interface GameFilters {
     origin?: GameOrigin;
     /** Jeux en 3D isométrique : true = seulement eux, undefined = tous. */
     is_isometric?: boolean;
+    /** Machines (slug : amstrad, amstrad-plus, gx4000) — filtre OR ; vide = toutes. */
+    machines?: string[];
 }
 
 /** A single game as returned by GET /api/games. */
