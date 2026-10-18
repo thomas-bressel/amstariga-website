@@ -41,6 +41,10 @@ function buildQS(filters: GameFilters, extra: Record<string, string | number> = 
         params.set('origin', filters.origin);
     }
 
+    if (filters.is_isometric !== undefined) {
+        params.set('is_isometric', String(filters.is_isometric));
+    }
+
     return params.toString();
 }
 
