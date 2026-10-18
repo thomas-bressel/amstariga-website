@@ -10,6 +10,13 @@ RUN npm ci
 # Copier le reste du code et build
 COPY . .
 ENV NODE_ENV=production
+
+# Adresse publique de l'API, appelée par le navigateur (filtres, recherche…) : intégrée
+# au code client pendant le build, elle doit être fournie par le pipeline
+ARG PUBLIC_API_URL
+ENV PUBLIC_API_URL=${PUBLIC_API_URL}
+RUN test -n "$PUBLIC_API_URL" || { echo "PUBLIC_API_URL manquant" >&2; exit 1; }
+
 RUN npm run build
 
 # ── Stage 2: Production ────────────────────────────────────────────────────────
