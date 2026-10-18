@@ -46,6 +46,9 @@ const { title = 'AmstArigA — Fiche jeu', gameId } = Astro.props;
     <body class="detail-page">
         <ThemeInit />
 
+        <!-- Lien d'évitement : premier élément atteint au clavier -->
+        <a href="#contenu" class="skip-link">Aller au contenu</a>
+
         <!-- Scan lines permanentes (sans Three.js) -->
         <div id="crt-overlay" aria-hidden="true"></div>
 
@@ -53,8 +56,8 @@ const { title = 'AmstArigA — Fiche jeu', gameId } = Astro.props;
         <header class="main-header">
             <div class="hf hf--logo is-visible no-transition">
                 <div class="logo">
-                    <a href="/" style="text-decoration:none;">
-                        <svg class="logo-svg" viewBox="0 0 280 64" xmlns="http://www.w3.org/2000/svg">
+                    <a href="/" style="text-decoration:none;" aria-label="AmstArigA : accueil">
+                        <svg class="logo-svg" viewBox="0 0 280 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
                             <defs>
                                 <linearGradient id="grad-amstrad" x1="0%" y1="0%" x2="100%" y2="100%">
                                     <stop offset="0%"   stop-color="#FFFFFF"/>
@@ -87,8 +90,8 @@ const { title = 'AmstArigA — Fiche jeu', gameId } = Astro.props;
                     </a>
                 </div>
                 <a href="/" class="back-btn back-btn--inline js-back">
-                    <span class="back-arrow">←</span>
-                    <span class="back-lbl">INDEX</span>
+                    <span class="back-arrow" aria-hidden="true">←</span>
+                    <span class="back-lbl">INDEX</span><span class="sr-only"> : retour à la liste des jeux</span>
                 </a>
             </div>
 
@@ -97,8 +100,8 @@ const { title = 'AmstArigA — Fiche jeu', gameId } = Astro.props;
             <div class="hf hf--actions is-visible no-transition">
                 <div class="header-actions">
                     <a href="/" class="back-btn back-btn--desktop js-back">
-                        <span class="back-arrow">←</span>
-                        <span class="back-lbl">INDEX</span>
+                        <span class="back-arrow" aria-hidden="true">←</span>
+                        <span class="back-lbl">INDEX</span><span class="sr-only"> : retour à la liste des jeux</span>
                     </a>
                 </div>
             </div>
