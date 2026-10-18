@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { fetchAvailableLanguages, fetchAvailableYears, fetchGames, fetchGamesCount } from '../../share/models/games';
 import type { GameFilters, GameListItem, GameOrigin, Language } from '../../share/types/game';
 import { FILTER_PARAMS, hasActiveFilters } from '../../share/utils/filters';
+import { MACHINES, machineBadge } from '../../share/utils/machines';
 import { thumbnailPath } from '../../share/utils/thumbnail';
 import Carousel from '../carousel/Carousel';
 import SearchBar from './SearchBar';
@@ -32,6 +33,8 @@ function loadFilters(): GameFilters | null {
             years:             Array.isArray(f.years) ? f.years.map(Number).filter(Boolean) : [],
             is_adult:          f.is_adult === true ? true : undefined,
             origin:            f.origin === 'HUMAN' || f.origin === 'AI_ASSISTED' ? f.origin : undefined,
+            is_isometric:      f.is_isometric === true ? true : undefined,
+            machines:          Array.isArray(f.machines) ? f.machines.filter(m => MACHINES.some(x => x.slug === m)) : [],
         };
     } catch { return null; }
 }
@@ -259,6 +262,8 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
             years:             filters.years,
             is_adult:          filters.is_adult,
             origin:            filters.origin,
+            is_isometric:      filters.is_isometric,
+            machines:          filters.machines,
         }).then(langs => {
             if (stale) return;
             setAvailableLanguages(langs);
@@ -270,7 +275,7 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
             }
         }).catch(() => {});
         return () => { stale = true; };
-    }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), JSON.stringify(filters.years), filters.is_adult, filters.origin]);
+    }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), JSON.stringify(filters.years), filters.is_adult, filters.origin, filters.is_isometric, JSON.stringify(filters.machines)]);
 
     // Recharge les années disponibles quand les catégories ou is_adult changent
     // et purge les années sélectionnées qui ne sont plus dans la liste
@@ -281,6 +286,8 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
             child_categories:  filters.child_categories,
             is_adult:          filters.is_adult,
             origin:            filters.origin,
+            is_isometric:      filters.is_isometric,
+            machines:          filters.machines,
         }).then(years => {
             if (stale) return;
             setAvailableYears(years);
@@ -293,7 +300,7 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
             }
         }).catch(() => {});
         return () => { stale = true; };
-    }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), filters.is_adult, filters.origin]);
+    }, [JSON.stringify(filters.parent_categories), JSON.stringify(filters.child_categories), filters.is_adult, filters.origin, filters.is_isometric, JSON.stringify(filters.machines)]);
 
     // On mount — filtres de l'URL : déjà appliqués par le SSR, ils deviennent les filtres mémorisés
     // et quittent l'URL (recharger la page les réappliquerait sinon par-dessus les choix suivants).
@@ -482,6 +489,17 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
         updateFilters({ is_adult: filters.is_adult === true ? undefined : true });
     }
 
+    /** Toggles a machine (CPC, Plus, GX4000) in the machine filter (OR between machines). */
+    function toggleMachine(slug: string) {
+        const machines = filters.machines ?? [];
+        updateFilters({ machines: machines.includes(slug) ? machines.filter(m => m !== slug) : [...machines, slug] });
+    }
+
+    /** Toggles the isometric 3D filter: only isometric games, or all games. */
+    function toggleIsometric() {
+        updateFilters({ is_isometric: filters.is_isometric === true ? undefined : true });
+    }
+
     /** Toggles the origin filter (human / AI-assisted games); clicking the active one clears it. */
     function toggleOrigin(origin: GameOrigin) {
         updateFilters({ origin: filters.origin === origin ? undefined : origin });
@@ -493,8 +511,10 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
         (filters.child_categories?.length  ?? 0) +
         (filters.languages?.length         ?? 0) +
         (filters.years?.length             ?? 0) +
+        (filters.machines?.length          ?? 0) +
         (filters.is_adult !== undefined ? 1 : 0) +
-        (filters.origin ? 1 : 0);
+        (filters.origin ? 1 : 0) +
+        (filters.is_isometric !== undefined ? 1 : 0);
 
     useEffect(() => {
         window.dispatchEvent(new CustomEvent('retro:filter-count', { detail: { count: activeCount } }));
@@ -533,6 +553,14 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
                 {/* ── Active filters strip ── */}
                 {activeCount > 0 && (
                     <div className="active-filters-strip has-tags">
+                        {filters.machines?.map(slug => {
+                            const machine = MACHINES.find(m => m.slug === slug);
+                            return (
+                                <span key={slug} className="atag" onClick={() => toggleMachine(slug)}>
+                                    {machine?.icon} {machine?.label ?? slug.toUpperCase()} <span className="atag-x">&times;</span>
+                                </span>
+                            );
+                        })}
                         {filters.parent_categories?.map(cat => (
                             <span key={cat} className="atag" onClick={() => toggleCategory(cat)}>
                                 {cat} <span className="atag-x">&times;</span>
@@ -562,6 +590,11 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
                             <span className="atag" onClick={() => toggleOrigin(filters.origin!)}>
                                 {ORIGINS.find(o => o.value === filters.origin)?.icon} {ORIGINS.find(o => o.value === filters.origin)?.label}
                                 {' '}<span className="atag-x">&times;</span>
+                            </span>
+                        )}
+                        {filters.is_isometric === true && (
+                            <span className="atag" onClick={toggleIsometric}>
+                                🧊 3D ISOMÉTRIQUE <span className="atag-x">&times;</span>
                             </span>
                         )}
                     </div>
@@ -604,6 +637,9 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
                                 {game.origin === 'AI_ASSISTED' && (
                                     <span className="ai-badge" title="Jeu réalisé avec l'aide d'une IA">IA</span>
                                 )}
+                                {machineBadge(game.machine) && (
+                                    <span className="machine-badge" title={game.machine_name}>{machineBadge(game.machine)}</span>
+                                )}
                             </div>
                             <div className="game-info">
                                 <div className="game-title">{game.main_title}</div>
@@ -633,6 +669,19 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
                             <button className="sheet-reset" onClick={resetFilters}>TOUT EFFACER</button>
                         </div>
                         <div className="sheet-body">
+                            <div className="sheet-section-lbl">🖥️ Machine</div>
+                            <div className="cat-grid">
+                                {MACHINES.map(({ slug, label, icon }) => (
+                                    <button
+                                        key={slug}
+                                        className={`cat-btn ${filters.machines?.includes(slug) ? 'active' : ''}`}
+                                        onClick={() => toggleMachine(slug)}
+                                    >
+                                        <span className="cat-ico">{icon}</span>
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
                             <div className="sheet-section-lbl">🗃️ Type</div>
                             <div className="cat-grid">
                                 {PARENT_CATS.map(({ name, icon }) => (
@@ -665,6 +714,16 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
                                         {label}
                                     </button>
                                 ))}
+                            </div>
+                            <div className="sheet-section-lbl">🧊 Graphismes</div>
+                            <div className="cat-grid">
+                                <button
+                                    className={`cat-btn ${filters.is_isometric === true ? 'active' : ''}`}
+                                    onClick={toggleIsometric}
+                                >
+                                    <span className="cat-ico">🧊</span>
+                                    3D ISOMÉTRIQUE
+                                </button>
                             </div>
                             {visibleGenres.length > 0 && (
                                 <>

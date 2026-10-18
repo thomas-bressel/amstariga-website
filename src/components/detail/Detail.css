@@ -15,6 +15,8 @@
     --text-dim:  #cfc8bf;   /* 8.1:1 */
     --label:     #ffbaa9;   /* rouge brique éclairci, 8.1:1 */
     --ai:        #dcbcf7;   /* violet IA, 8:1 */
+    --iso:       #a8e6f5;   /* cyan 3D isométrique */
+    --machine:   #f2d68a;   /* or : machine du jeu (CPC, Plus, GX4000) */
     --bug:       #ffb3b3;   /* 7.9:1 */
 }
 
@@ -218,6 +220,20 @@
     color: var(--ai);
     opacity: 1;
     background: rgba(200, 162, 236, 0.08);
+}
+
+.hero-tag--machine {
+    border-color: var(--machine);
+    color: var(--machine);
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.hero-tag--iso {
+    border-color: var(--iso);
+    color: var(--iso);
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.2);
 }
 
 /* ============================================================
@@ -772,10 +788,55 @@
     line-height: 1.6;
 }
 
-.bug-list {
-    color: var(--bug);
-    padding-left: 1.2rem;
+/* Bugs connus : description, édition concernée, capture d'écran */
+.bug-reports {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    max-width: 80ch;
 }
+
+.bug-report {
+    padding: 14px 18px;
+    border: 1px solid var(--border-hi);
+    border-left: 3px solid var(--bug);
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.bug-text {
+    color: var(--text);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.bug-text > span[aria-hidden] { color: var(--bug); }
+
+.bug-release {
+    margin-top: 6px;
+    color: var(--text-dim);
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+}
+
+.bug-shot {
+    display: inline-block;
+    margin-top: 12px;
+    max-width: 100%;
+}
+
+.bug-shot img {
+    display: block;
+    max-width: 100%;
+    max-height: 400px;
+    background: #000;
+    border: 1px solid var(--border);
+    transition: border-color 0.2s;
+}
+
+.bug-shot:hover img,
+.bug-shot:focus-visible img { border-color: var(--accent); }
 
 /* ── Bouton retour dans le header ── */
 .back-btn {

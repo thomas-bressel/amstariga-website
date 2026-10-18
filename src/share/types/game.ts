@@ -17,6 +17,10 @@ export interface GameFilters {
     is_adult?: boolean;
     /** Origine : jeux humains ou réalisés avec l'aide d'une IA ; undefined = tous. */
     origin?: GameOrigin;
+    /** Jeux en 3D isométrique : true = seulement eux, undefined = tous. */
+    is_isometric?: boolean;
+    /** Machines (slug : amstrad, amstrad-plus, gx4000) — filtre OR ; vide = toutes. */
+    machines?: string[];
 }
 
 /** A single game as returned by GET /api/games. */
@@ -108,14 +112,26 @@ export interface Game extends GameListItem {
     synopsis?:     string;
     notes?:        string;
     is_adult?:     boolean;
+    is_isometric?: boolean;
     cpc_power_id?: number;
     categories?:   string[];
     authors?:      GameAuthor[];
     dumps?:        GameDump[];
     tips?:         string[];
     bugs?:         string[];
+    /** Bugs détaillés : édition concernée et capture d'écran (remplace bugs). */
+    bug_reports?:  GameBug[];
     comments?:     GameComment[];
     screenshots?:       string[];
     compilation_games?: CompilationGame[];
     files?:             GameFiles;
+}
+
+/** Bug connu d'un jeu. */
+export interface GameBug {
+    description?: string;
+    /** Édition où il se produit (éditeur · année · région) ; absente : toutes les éditions. */
+    release?: string;
+    /** Capture d'écran sur le serveur (/uploads/…). */
+    screenshot?: string;
 }

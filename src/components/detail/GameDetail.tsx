@@ -2,7 +2,7 @@ import { Fragment, useCallback, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchGames } from '../../share/models/games';
-import type { Game, GameDump, GameAuthor, GameComment, GameFile } from '../../share/types/game';
+import type { Game, GameDump, GameAuthor, GameComment, GameFile, GameBug } from '../../share/types/game';
 
 interface Props {
     game: Game;
@@ -157,9 +157,14 @@ function hasData(key: string, game: Game): boolean {
     if (key === 'compil_k7')   return isCompilation(game) && (game.dumps ?? []).some(d => d.category.startsWith('K7'));
     if (key === 'authors')     return (game.authors?.length  ?? 0) > 0;
     if (key === 'tips')        return (game.tips?.length     ?? 0) > 0;
-    if (key === 'bugs')        return (game.bugs?.length     ?? 0) > 0;
+    if (key === 'bugs')        return bugReports(game).length > 0;
     if (key === 'comments')    return (game.comments?.length ?? 0) > 0;
     return false;
+}
+
+/** Bugs connus : détaillés (édition, capture) si l'API les donne, sinon leurs seules descriptions */
+function bugReports(game: Game): GameBug[] {
+    return game.bug_reports ?? (game.bugs ?? []).map(description => ({ description }));
 }
 
 /** Liste courte d'une plaque, avec le nombre d'éléments en plus */
@@ -269,7 +274,9 @@ function PlatePreview({ plateKey, game }: { plateKey: string; game: Game }) {
         );
     }
     if (plateKey === 'tips' || plateKey === 'bugs') {
-        const items = (plateKey === 'tips' ? game.tips : game.bugs) ?? [];
+        const items = plateKey === 'tips'
+            ? game.tips ?? []
+            : bugReports(game).map(b => b.description ?? 'Capture d’écran du bug');
         return (
             <>
                 <p className="plate-excerpt plate-excerpt--short">{items[0]}</p>
@@ -513,8 +520,25 @@ function ModalContent({ plateKey, game }: { plateKey: string; game: Game }) {
 
     if (plateKey === 'bugs') {
         return (
-            <ul className="modal-list bug-list">
-                {(game.bugs ?? []).map((b, i) => <li key={i}><span aria-hidden="true">⚠ </span><Linkified text={b} /></li>)}
+            <ul className="bug-reports">
+                {bugReports(game).map((b, i) => (
+                    <li key={i} className="bug-report">
+                        {b.description && (
+                            <p className="bug-text"><span aria-hidden="true">⚠ </span><Linkified text={b.description} /></p>
+                        )}
+                        <p className="bug-release">{b.release ? `Édition : ${b.release}` : 'Toutes les éditions'}</p>
+                        {b.screenshot && (
+                            <a className="bug-shot" href={b.screenshot} target="_blank" rel="noopener noreferrer">
+                                <img
+                                    src={b.screenshot}
+                                    alt={`Capture d’écran du bug${b.description ? ` : ${b.description.split('\n')[0]}` : ''}`}
+                                    loading="lazy"
+                                />
+                                <span className="sr-only">{NEW_TAB}</span>
+                            </a>
+                        )}
+                    </li>
+                ))}
             </ul>
         );
     }
@@ -608,7 +632,7 @@ export default function GameDetail({ game }: Props) {
         ['Scans',          (game.files?.scans?.length   ?? 0) > 0],
         ['Manuel',         (game.files?.manuals?.length ?? 0) > 0],
         ['Astuces',        (game.tips?.length     ?? 0) > 0],
-        ['Bugs',           (game.bugs?.length     ?? 0) > 0],
+        ['Bugs',           bugReports(game).length > 0],
         ['Commentaires',   (game.comments?.length ?? 0) > 0],
         ['Équipe',         (game.authors?.length  ?? 0) > 0],
     ];
@@ -640,8 +664,14 @@ export default function GameDetail({ game }: Props) {
                         <h1 className="hero-title">{game.main_title}</h1>
                         <p className="hero-sub">{sub}</p>
                         <ul className="hero-tags" aria-label="Contenu de la fiche">
+                            {game.machine_name && (
+                                <li className="hero-tag hero-tag--machine"><span className="sr-only">Machine : </span>{game.machine_name.toUpperCase()}</li>
+                            )}
                             {game.origin === 'AI_ASSISTED' && (
                                 <li className="hero-tag hero-tag--ai">IA ASSISTÉ<span className="sr-only"> : jeu réalisé avec l’aide d’une IA</span></li>
+                            )}
+                            {game.is_isometric && (
+                                <li className="hero-tag hero-tag--iso">3D ISOMÉTRIQUE<span className="sr-only"> : jeu en 3D isométrique</span></li>
                             )}
                             {available.map(([label, on]) => (
                                 <li key={label} className={`hero-tag${on ? ' hero-tag--on' : ' hero-tag--off'}`}>

@@ -33,12 +33,20 @@ function buildQS(filters: GameFilters, extra: Record<string, string | number> = 
         params.append('years', String(y));
     }
 
+    for (const machine of filters.machines ?? []) {
+        params.append('machines', machine);
+    }
+
     if (filters.is_adult !== undefined) {
         params.set('is_adult', String(filters.is_adult));
     }
 
     if (filters.origin) {
         params.set('origin', filters.origin);
+    }
+
+    if (filters.is_isometric !== undefined) {
+        params.set('is_isometric', String(filters.is_isometric));
     }
 
     return params.toString();
