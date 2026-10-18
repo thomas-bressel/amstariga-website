@@ -47,10 +47,21 @@ jobs:
         key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
         port: ${{ secrets.VPS_PORT }}
         script: |
+          set -e
           cd /var/www/applications/amstariga/website/staging
 
-          # Récupérer la nouvelle image
-          docker compose pull amstariga-website
+          # Récupérer l'image construite par ce pipeline, par le tag de son commit : juste après
+          # le push, Docker Hub peut encore servir l'image précédente sous le tag staging
+          # (déploiement « réussi » sans effet, vu le 2026-10-18). On réessaie tant qu'il ne
+          # la sert pas, puis elle devient l'image staging utilisée par docker compose.
+          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/amstariga-website
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            docker pull "$IMAGE:${{ github.sha }}" && break
+            [ "$attempt" = 10 ] && exit 1
+            sleep 10
+          done
+          docker tag "$IMAGE:${{ github.sha }}" "$IMAGE:staging"
+          docker image rm "$IMAGE:${{ github.sha }}" > /dev/null
 
           # Recréer et relancer le container avec la nouvelle image
           docker compose up -d --force-recreate --no-deps amstariga-website
