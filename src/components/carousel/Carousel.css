@@ -179,3 +179,14 @@
     color: #c8a2ec;
     border: 1px solid #c8a2ec;
 }
+
+/* Machine autre que le CPC (PLUS, GX4000) */
+.carousel-machine-badge {
+    margin-left: 10px;
+    font-size: 0.6em;
+    letter-spacing: 1px;
+    padding: 1px 6px;
+    vertical-align: middle;
+    color: #f2d68a;
+    border: 1px solid #f2d68a;
+}
