@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { Fragment, useCallback, useState, useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { fetchGames } from '../../share/models/games';
 import type { Game, GameDump, GameAuthor, GameComment, GameFile } from '../../share/types/game';
 
@@ -6,20 +8,25 @@ interface Props {
     game: Game;
 }
 
-/* ── Config des plaques ── */
+/* ── Config des plaques : code d'ambiance (décoratif) et titre en clair ── */
 const PLATE_LAYOUT = [
-    { key: 'info',        label: 'SYSTEM_IDENTITY',   size: 'span-2 row-2' },
-    { key: 'dump',        label: 'DISK_ARCHIVE',      size: 'span-2'       },
-    { key: 'scans',       label: 'PACKAGING_SCANS',   size: 'span-2'       },
-    { key: 'manual',      label: 'MANUAL_FILE',       size: ''             },
-    { key: 'compilation', label: 'COMPILATIONS',      size: 'span-2'       },
-    { key: 'compil_d7',   label: 'COMPILATION D7',    size: 'span-2'       },
-    { key: 'compil_k7',   label: 'COMPILATION K7',    size: 'span-2'       },
-    { key: 'authors',     label: 'PRODUCTION_STAFF',  size: ''             },
-    { key: 'tips',        label: 'POKES & ASTUCES',   size: ''             },
-    { key: 'bugs',        label: 'BUG_REPORT',        size: ''             },
-    { key: 'comments',    label: 'INTERNAL_LOGS',     size: ''             },
+    { key: 'info',        code: 'SYSTEM_IDENTITY',  title: 'Fiche du jeu',                  size: 'span-2 row-2' },
+    { key: 'dump',        code: 'DISK_ARCHIVE',     title: 'Fichiers du jeu',               size: 'span-2'       },
+    { key: 'scans',       code: 'PACKAGING_SCANS',  title: 'Boîte et support',              size: 'span-2'       },
+    { key: 'manual',      code: 'MANUAL_FILE',      title: 'Manuel',                        size: ''             },
+    { key: 'compilation', code: 'COMPILATIONS',     title: 'Présent dans les compilations', size: 'span-2'       },
+    { key: 'compil_d7',   code: 'COMPILATION D7',   title: 'Disquettes de la compilation',  size: 'span-2'       },
+    { key: 'compil_k7',   code: 'COMPILATION K7',   title: 'Cassettes de la compilation',   size: 'span-2'       },
+    { key: 'authors',     code: 'PRODUCTION_STAFF', title: 'Équipe',                        size: ''             },
+    { key: 'tips',        code: 'POKES & ASTUCES',  title: 'Astuces',                       size: ''             },
+    { key: 'bugs',        code: 'BUG_REPORT',       title: 'Bugs connus',                   size: ''             },
+    { key: 'comments',    code: 'INTERNAL_LOGS',    title: 'Commentaires',                  size: ''             },
 ];
+
+/** Éléments montrés dans l'aperçu d'une plaque, avant « Tout voir » */
+const PREVIEW_ITEMS = 3;
+
+const NEW_TAB = ' (s’ouvre dans un nouvel onglet)';
 
 function isCompilation(game: Game): boolean {
     return (game.categories ?? []).some(c => c.toUpperCase() === 'COMPILATION');
@@ -37,10 +44,10 @@ function splitDumps(game: Game): { direct: GameDump[]; compilation: GameDump[] }
 
 /** Libellés des scans classés dans le backoffice */
 const SCAN_TYPES: Record<string, string> = {
-    cover_front: 'FACE AVANT',
-    cover_back:  'FACE ARRIÈRE',
-    media:       'SUPPORT',
-    inlay:       'JAQUETTE / ENCART',
+    cover_front: 'Face avant',
+    cover_back:  'Face arrière',
+    media:       'Support',
+    inlay:       'Jaquette ou encart',
 };
 
 /** Dumps propres au jeu (une compilation montre les siens dans ses plaques D7 / K7) */
@@ -61,18 +68,64 @@ function formatSize(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
 }
 
+/** 1 fichier, 3 fichiers */
+function plural(count: number, one: string, many: string): string {
+    return `${count} ${count > 1 ? many : one}`;
+}
+
+function yearLabel(game: Game): string {
+    return game.release_year ? String(game.release_year) : 'Année inconnue';
+}
+
+function editorLabel(game: Game): string {
+    return game.editor ?? 'Éditeur inconnu';
+}
+
+function playersLabel(game: Game): string {
+    return game.players_min === game.players_max
+        ? plural(game.players_min ?? 1, 'joueur', 'joueurs')
+        : `${game.players_min} à ${game.players_max} joueurs`;
+}
+
+/** Catégorie parente d'abord (en capitales), puis les sous-catégories */
+function sortedCategories(game: Game): string[] {
+    return [...(game.categories ?? [])].sort((a, b) => {
+        const aParent = a === a.toUpperCase();
+        const bParent = b === b.toUpperCase();
+        if (aParent && !bParent) return -1;
+        if (!aParent && bParent) return 1;
+        return 0;
+    });
+}
+
+/** Texte dont les adresses web deviennent des liens */
+function Linkified({ text }: { text: string }) {
+    const parts = text.split(/(https?:\/\/[^\s<>"]+[^\s<>".,;:!?)])/g);
+    return (
+        <>
+            {parts.map((part, i) => (i % 2 === 1
+                ? <a key={i} href={part} target="_blank" rel="noopener noreferrer">{part}<span className="sr-only">{NEW_TAB}</span></a>
+                : <Fragment key={i}>{part}</Fragment>))}
+        </>
+    );
+}
+
 /** Ligne d'un fichier, avec son lien de téléchargement quand il est sur le serveur
- *  (viewable : lien « ouvrir » en plus, pour un manuel lisible dans le navigateur) */
+ *  (viewable : lien « ouvrir » en plus, pour un manuel lisible dans le navigateur).
+ *  Le nom du fichier fait partie du nom des liens : chaque lien se comprend seul. */
 function FileLine({ name, url, size, viewable }: { name: string; url?: string; size?: number; viewable?: boolean }) {
     return (
         <p className="file-line">
-            <span>FILE : {name}</span>
+            <span className="file-name">Fichier : {name}</span>
             {url && viewable && (
-                <a className="file-download" href={url} target="_blank" rel="noopener noreferrer">⧉ OUVRIR</a>
+                <a className="file-download" href={url} target="_blank" rel="noopener noreferrer">
+                    <span aria-hidden="true">⧉ </span>OUVRIR<span className="sr-only"> {name}{NEW_TAB}</span>
+                </a>
             )}
             {url && (
                 <a className="file-download" href={url} download={name}>
-                    ⇩ TÉLÉCHARGER{size != null && <span className="file-size"> · {formatSize(size)}</span>}
+                    <span aria-hidden="true">⇩ </span>TÉLÉCHARGER<span className="sr-only"> {name}</span>
+                    {size != null && <span className="file-size"> · {formatSize(size)}</span>}
                 </a>
             )}
         </p>
@@ -109,79 +162,133 @@ function hasData(key: string, game: Game): boolean {
     return false;
 }
 
-/* ── Aperçu court dans la plaque ── */
+/** Liste courte d'une plaque, avec le nombre d'éléments en plus */
+function PreviewList({ items, more }: { items: ReactNode[]; more: number }) {
+    return (
+        <>
+            <ul className="plate-list">
+                {items.map((item, i) => <li key={i}>{item}</li>)}
+            </ul>
+            {more > 0 && <p className="plate-more">+ {more} de plus</p>}
+        </>
+    );
+}
+
+/* ── Aperçu dans la plaque : une partie du contenu, lisible sans ouvrir ── */
 function PlatePreview({ plateKey, game }: { plateKey: string; game: Game }) {
     if (plateKey === 'info') {
         return (
             <>
-                <h2 className="plate-title">{game.main_title}</h2>
-                <p className="plate-meta">
-                    {game.release_year ?? '????'} · {game.editor ?? '???'}
-                </p>
+                <p className="plate-title">{game.main_title}</p>
+                <p className="plate-meta">{yearLabel(game)} · {editorLabel(game)} · {playersLabel(game)}</p>
                 {(game.categories?.length ?? 0) > 0 && (
-                    <div style={{ marginTop: '0.6rem', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {[...game.categories!]
-                            .sort((a, b) => {
-                                const aParent = a === a.toUpperCase();
-                                const bParent = b === b.toUpperCase();
-                                if (aParent && !bParent) return -1;
-                                if (!aParent && bParent) return 1;
-                                return 0;
-                            })
-                            .map((c, i) => (
-                                <span key={i} className="hero-tag hero-tag--on" style={{ fontSize: '0.55rem' }}>{c}</span>
-                            ))}
-                    </div>
+                    <ul className="plate-tags" aria-label="Catégories">
+                        {sortedCategories(game).map((c, i) => <li key={i} className="hero-tag hero-tag--on">{c}</li>)}
+                    </ul>
                 )}
+                {(game.synopsis || game.notes) && <p className="plate-excerpt">{game.synopsis || game.notes}</p>}
             </>
         );
     }
     if (plateKey === 'dump') {
-        const dumps     = ownDumps(game);
-        const others    = otherReleaseFiles(game);
-        const types     = [...new Set(dumps.map(d => d.category))].join(' · ');
-        const downloads = dumps.filter(d => d.url).length + others.length;
+        const dumps  = ownDumps(game);
+        const others = otherReleaseFiles(game);
+        const lines  = [
+            ...dumps.map(d => ({ label: d.category, name: d.file_name, url: d.url, size: d.size })),
+            ...others.map(f => ({ label: 'Fichier', name: f.name, url: f.url, size: f.size })),
+        ];
+        const downloads = lines.filter(l => l.url).length;
         return (
-            <div className="plate-empty">
-                {types && `${types} — `}{dumps.length + others.length} fichier(s)
-                {downloads > 0 && ` · ${downloads} téléchargeable(s)`}
-            </div>
+            <>
+                <p className="plate-meta">
+                    {plural(lines.length, 'fichier', 'fichiers')}
+                    {downloads > 0 && ` · ${plural(downloads, 'téléchargeable', 'téléchargeables')}`}
+                </p>
+                <PreviewList
+                    items={lines.slice(0, PREVIEW_ITEMS).map(l => (
+                        <>
+                            <span className="plate-key">{l.label}</span> {l.name}
+                            {l.size != null && <span className="plate-dim"> · {formatSize(l.size)}</span>}
+                        </>
+                    ))}
+                    more={lines.length - PREVIEW_ITEMS}
+                />
+            </>
         );
     }
     if (plateKey === 'scans') {
+        const scans = game.files?.scans ?? [];
         return (
-            <div className="scan-strip">
-                {(game.files?.scans ?? []).slice(0, 4).map(s => (
-                    <img key={s.url} src={s.url} alt={s.name} loading="lazy" />
-                ))}
-            </div>
+            <>
+                <p className="plate-meta">{plural(scans.length, 'scan', 'scans')}</p>
+                <div className="scan-strip">
+                    {scans.slice(0, 4).map(s => (
+                        <img key={s.url} src={s.url} alt={`${s.type ? SCAN_TYPES[s.type] ?? s.type : 'Scan'} : ${s.name}`} loading="lazy" />
+                    ))}
+                </div>
+            </>
         );
     }
     if (plateKey === 'manual') {
         const manuals = game.files?.manuals ?? [];
-        return <div className="plate-empty">{manuals.length} manuel(s) · {manuals.map(m => m.name).join(', ')}</div>;
+        return (
+            <PreviewList
+                items={manuals.slice(0, PREVIEW_ITEMS).map(m => <>{m.name}<span className="plate-dim"> · {formatSize(m.size)}</span></>)}
+                more={manuals.length - PREVIEW_ITEMS}
+            />
+        );
     }
     if (plateKey === 'compilation') {
         const { compilation } = splitDumps(game);
         const names = [...new Set(compilation.map(d => d.file_name.split('(')[0].trim()))];
-        return <div className="plate-empty">{names.length} compilation(s) : {names.join(', ')}</div>;
+        return <PreviewList items={names.slice(0, PREVIEW_ITEMS)} more={names.length - PREVIEW_ITEMS} />;
     }
-    if (plateKey === 'compil_d7') {
-        const d7 = (game.dumps ?? []).filter(d => d.category.startsWith('D7'));
-        return <div className="plate-empty">{d7.length} face(s) disquette</div>;
+    if (plateKey === 'compil_d7' || plateKey === 'compil_k7') {
+        const support = plateKey === 'compil_d7' ? 'D7' : 'K7';
+        const dumps   = (game.dumps ?? []).filter(d => d.category.startsWith(support));
+        const members = (game.compilation_games ?? []).map(m => m.title);
+        const titles  = members.length > 0 ? members : support === 'K7' ? extractK7Games(dumps) : [];
+        return (
+            <>
+                <p className="plate-meta">
+                    {support === 'D7' ? plural(dumps.length, 'face de disquette', 'faces de disquette')
+                                      : plural(dumps.length, 'face de cassette', 'faces de cassette')}
+                    {titles.length > 0 && ` · ${plural(titles.length, 'jeu', 'jeux')}`}
+                </p>
+                <PreviewList items={titles.slice(0, PREVIEW_ITEMS)} more={titles.length - PREVIEW_ITEMS} />
+            </>
+        );
     }
-    if (plateKey === 'compil_k7') {
-        const k7 = (game.dumps ?? []).filter(d => d.category.startsWith('K7'));
-        const titles = extractK7Games(k7);
-        const label  = titles.length > 0
-            ? `${titles.length} jeu(x) · ${k7.length} face(s) cassette`
-            : `${k7.length} face(s) cassette`;
-        return <div className="plate-empty">{label}</div>;
+    if (plateKey === 'authors') {
+        const authors = game.authors ?? [];
+        return (
+            <PreviewList
+                items={authors.slice(0, PREVIEW_ITEMS).map(a => <><span className="plate-key">{a.role} :</span> {a.name}</>)}
+                more={authors.length - PREVIEW_ITEMS}
+            />
+        );
     }
-    if (plateKey === 'authors' && game.authors?.[0]) {
-        return <div className="plate-empty">{game.authors[0].role} : {game.authors[0].name}</div>;
+    if (plateKey === 'tips' || plateKey === 'bugs') {
+        const items = (plateKey === 'tips' ? game.tips : game.bugs) ?? [];
+        return (
+            <>
+                <p className="plate-excerpt plate-excerpt--short">{items[0]}</p>
+                {items.length > 1 && <p className="plate-more">+ {items.length - 1} de plus</p>}
+            </>
+        );
     }
-    return <div className="plate-empty">SECTOR_{plateKey.toUpperCase()}_ACTIVE</div>;
+    if (plateKey === 'comments') {
+        const comments = game.comments ?? [];
+        const first    = comments[0];
+        return (
+            <>
+                {first?.author && <p className="plate-key">{first.author}</p>}
+                {first?.content && <p className="plate-excerpt plate-excerpt--short">{first.content}</p>}
+                {comments.length > 1 && <p className="plate-more">+ {comments.length - 1} de plus</p>}
+            </>
+        );
+    }
+    return null;
 }
 
 /* ── Modale compilations avec résolution des IDs ── */
@@ -214,20 +321,16 @@ function CompilationModal({ game }: { game: Game }) {
 
     return (
         <>
-            <h2 className="modal-section-title">COMPILATIONS</h2>
             {names.map(name => {
                 const info = groups[name];
                 const id   = ids[name];
                 return (
                     <div key={name} className="dump-block">
                         <h3 className="dump-label">
-                            {id != null
-                                ? <a href={`/game/${id}`} style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: '3px' }}>{name} →</a>
-                                : name
-                            }
+                            {id != null ? <a href={`/game/${id}`}>{name} →</a> : name}
                         </h3>
-                        <p>SUPPORT : {[...info.categories].join(' · ')}</p>
-                        {info.command && <p>COMMANDE : <code>{info.command}</code></p>}
+                        <p>Support : {[...info.categories].join(' · ')}</p>
+                        {info.command && <p>Commande : <code>{info.command}</code></p>}
                     </div>
                 );
             })}
@@ -235,23 +338,22 @@ function CompilationModal({ game }: { game: Game }) {
     );
 }
 
-/* ── Modale D7 d'une compilation : par jeu membre (regroupé par n° de face) ── */
-function CompilD7Modal({ game }: { game: Game }) {
-    const dumps   = (game.dumps ?? []).filter(d => d.category.startsWith('D7'));
+/* ── Modale D7 / K7 d'une compilation : fichiers regroupés par jeu membre ── */
+function CompilSupportModal({ game, support }: { game: Game; support: 'D7' | 'K7' }) {
+    const dumps   = (game.dumps ?? []).filter(d => d.category.startsWith(support));
     const command = dumps.find(d => d.loading_command)?.loading_command;
     const members = game.compilation_games ?? [];
 
-    // Extraire le numéro de face principal : "Face 1A" → 1, "Face 2B" → 2
-    function faceNum(filename: string): number {
-        const m = filename.match(/Face\s+(\d+)/i);
+    // D7 : « Face 1A » → jeu 1 ; K7 : « (1. Cabal) » → jeu 1
+    function memberNumber(filename: string): number {
+        const m = support === 'D7' ? filename.match(/Face\s+(\d+)/i) : filename.match(/\((\d+)\./);
         return m ? parseInt(m[1]) : 0;
     }
 
-    // Regrouper les fichiers par numéro de face → membre correspondant (face n = membre n)
     const byMember: Record<number, GameDump[]> = {};
     const unmatched: GameDump[] = [];
     for (const d of dumps) {
-        const n = faceNum(d.file_name);
+        const n = memberNumber(d.file_name);
         if (n > 0) {
             if (!byMember[n]) byMember[n] = [];
             byMember[n].push(d);
@@ -260,25 +362,21 @@ function CompilD7Modal({ game }: { game: Game }) {
         }
     }
 
-    // Si on a des membres ET des faces numérotées → affichage groupé par jeu
+    const commandLine = command && <p className="modal-command">Commande : <code>{command}</code></p>;
+
+    // Membres connus et faces numérotées : affichage groupé par jeu
     if (members.length > 0 && Object.keys(byMember).length > 0) {
         return (
             <>
-                <h2 className="modal-section-title">COMPILATION D7</h2>
-                {command && <p style={{ marginBottom: '1.5rem' }}>COMMANDE : <code>{command}</code></p>}
-                {members.map((m, i) => {
-                    const faces = byMember[i + 1] ?? [];
-                    return (
-                        <div key={m.id} className="dump-block">
-                            <h3 className="dump-label">
-                                <a href={`/game/${m.id}`} style={{ color: 'var(--accent)', textDecoration: 'none' }}>→ {m.title}</a>
-                            </h3>
-                            {faces.map((d, j) => (
-                                <FileLine key={j} name={d.file_name} url={d.url} size={d.size} />
-                            ))}
-                        </div>
-                    );
-                })}
+                {commandLine}
+                {members.map((m, i) => (
+                    <div key={m.id} className="dump-block">
+                        <h3 className="dump-label"><a href={`/game/${m.id}`}>{m.title} →</a></h3>
+                        {(byMember[i + 1] ?? []).map((d, j) => (
+                            <FileLine key={j} name={d.file_name} url={d.url} size={d.size} />
+                        ))}
+                    </div>
+                ))}
                 {unmatched.map((d, i) => (
                     <FileLine key={i} name={d.file_name} url={d.url} size={d.size} />
                 ))}
@@ -286,76 +384,10 @@ function CompilD7Modal({ game }: { game: Game }) {
         );
     }
 
-    // Fallback : liste brute
+    // Sinon : liste brute
     return (
         <>
-            <h2 className="modal-section-title">COMPILATION D7</h2>
-            {command && <p style={{ marginBottom: '1.5rem' }}>COMMANDE : <code>{command}</code></p>}
-            <div className="dump-block">
-                {dumps.map((d, i) => (
-                    <FileLine key={i} name={d.file_name} url={d.url} size={d.size} />
-                ))}
-            </div>
-        </>
-    );
-}
-
-/* ── Modale K7 d'une compilation : par jeu membre (regroupé par "(N. Titre)") ── */
-function CompilK7Modal({ game }: { game: Game }) {
-    const dumps   = (game.dumps ?? []).filter(d => d.category.startsWith('K7'));
-    const command = dumps.find(d => d.loading_command)?.loading_command;
-    const members = game.compilation_games ?? [];
-
-    // Extraire le numéro de jeu depuis "(1. Cabal)" ou "(2. Ghostbusters II)" → 1, 2…
-    function gameNum(filename: string): number {
-        const m = filename.match(/\((\d+)\./);
-        return m ? parseInt(m[1]) : 0;
-    }
-
-    // Regrouper les fichiers par numéro de jeu
-    const byMember: Record<number, GameDump[]> = {};
-    const unmatched: GameDump[] = [];
-    for (const d of dumps) {
-        const n = gameNum(d.file_name);
-        if (n > 0) {
-            if (!byMember[n]) byMember[n] = [];
-            byMember[n].push(d);
-        } else {
-            unmatched.push(d);
-        }
-    }
-
-    // Affichage groupé par jeu membre
-    if (members.length > 0 && Object.keys(byMember).length > 0) {
-        return (
-            <>
-                <h2 className="modal-section-title">COMPILATION K7</h2>
-                {command && <p style={{ marginBottom: '1.5rem' }}>COMMANDE : <code>{command}</code></p>}
-                {members.map((m, i) => {
-                    const faces = byMember[i + 1] ?? [];
-                    return (
-                        <div key={m.id} className="dump-block">
-                            <h3 className="dump-label">
-                                <a href={`/game/${m.id}`} style={{ color: 'var(--accent)', textDecoration: 'none' }}>→ {m.title}</a>
-                            </h3>
-                            {faces.map((d, j) => (
-                                <FileLine key={j} name={d.file_name} url={d.url} size={d.size} />
-                            ))}
-                        </div>
-                    );
-                })}
-                {unmatched.map((d, i) => (
-                    <FileLine key={i} name={d.file_name} url={d.url} size={d.size} />
-                ))}
-            </>
-        );
-    }
-
-    // Fallback : liste brute
-    return (
-        <>
-            <h2 className="modal-section-title">COMPILATION K7</h2>
-            {command && <p style={{ marginBottom: '1.5rem' }}>COMMANDE : <code>{command}</code></p>}
+            {commandLine}
             <div className="dump-block">
                 {dumps.map((d, i) => (
                     <FileLine key={i} name={d.file_name} url={d.url} size={d.size} />
@@ -369,29 +401,24 @@ function CompilK7Modal({ game }: { game: Game }) {
 function ModalContent({ plateKey, game }: { plateKey: string; game: Game }) {
     if (plateKey === 'info') {
         const cats = game.categories?.join(', ') ?? '—';
+        const parent   = game.categories?.find(c => c === c.toUpperCase());
+        const children = game.categories?.filter(c => c !== c.toUpperCase()) ?? [];
+        const category = !parent ? cats : children.length === 0 ? parent : `${parent} de type ${children.join(', ')}`;
         return (
             <>
-                <h1 className="modal-game-title">{game.main_title}</h1>
+                <h3 className="modal-game-title">{game.main_title}</h3>
                 {game.alt_title && <p className="modal-alt-title">{game.alt_title}</p>}
                 {game.synopsis  && <p className="modal-synopsis">{game.synopsis}</p>}
                 <hr className="modal-sep" />
-                <h3 className="modal-sub-title">RELEASE_INFO</h3>
-                <p><strong>ANNÉE :</strong> {game.release_year ?? '????'}</p>
-                <p><strong>ÉDITEUR :</strong> {game.editor ?? '???'}</p>
-                <p><strong>CATÉGORIE :</strong> {(() => {
-                    const parent = game.categories?.find(c => c === c.toUpperCase());
-                    const children = game.categories?.filter(c => c !== c.toUpperCase()) ?? [];
-                    if (!parent) return cats;
-                    if (children.length === 0) return parent;
-                    return `${parent} de type ${children.join(', ')}`;
-                })()}</p>
-                <p><strong>JOUEURS :</strong> {
-                    game.players_min === game.players_max
-                        ? `${game.players_min} joueur${(game.players_min ?? 1) > 1 ? 's' : ''}`
-                        : `${game.players_min} à ${game.players_max} joueurs`
-                }</p>
-                {game.rating && <p><strong>NOTE :</strong> {game.rating}/10</p>}
-                {game.notes && <p className="comment-quote" style={{ marginTop: '1.5rem' }}>{game.notes}</p>}
+                <h3 className="modal-sub-title">Édition</h3>
+                <dl className="modal-facts">
+                    <dt>Année</dt><dd>{yearLabel(game)}</dd>
+                    <dt>Éditeur</dt><dd>{editorLabel(game)}</dd>
+                    <dt>Catégorie</dt><dd>{category}</dd>
+                    <dt>Joueurs</dt><dd>{playersLabel(game)}</dd>
+                    {game.rating != null && <><dt>Note</dt><dd>{game.rating}/10</dd></>}
+                </dl>
+                {game.notes && <p className="modal-notes"><Linkified text={game.notes} /></p>}
             </>
         );
     }
@@ -405,22 +432,21 @@ function ModalContent({ plateKey, game }: { plateKey: string; game: Game }) {
         const others = otherReleaseFiles(game);
         return (
             <>
-                <h2 className="modal-section-title">DISK_DUMP_REPORT</h2>
                 {Object.entries(groups).map(([category, items]) => (
                     <div key={category} className="dump-block">
                         <h3 className="dump-label">{category}</h3>
                         {items.map((d, i) => (
-                            <div key={i} style={{ marginBottom: i < items.length - 1 ? '0.75rem' : 0 }}>
+                            <div key={i} className="dump-item">
                                 <FileLine name={d.file_name} url={d.url} size={d.size} />
-                                {d.loading_command && <p>COMMANDE : <code>{d.loading_command}</code></p>}
-                                {d.protection      && <p>PROTECTION : {d.protection}</p>}
+                                {d.loading_command && <p>Commande : <code>{d.loading_command}</code></p>}
+                                {d.protection      && <p>Protection : {d.protection}</p>}
                             </div>
                         ))}
                     </div>
                 ))}
                 {others.length > 0 && (
                     <div className="dump-block">
-                        <h3 className="dump-label">AUTRES FICHIERS</h3>
+                        <h3 className="dump-label">Autres fichiers</h3>
                         {others.map(f => <FileLine key={f.url} name={f.name} url={f.url} size={f.size} />)}
                     </div>
                 )}
@@ -430,20 +456,20 @@ function ModalContent({ plateKey, game }: { plateKey: string; game: Game }) {
 
     if (plateKey === 'scans') {
         return (
-            <>
-                <h2 className="modal-section-title">PACKAGING_SCANS</h2>
-                <div className="scan-gallery">
-                    {(game.files?.scans ?? []).map(s => (
-                        <a key={s.url} className="scan-item" href={s.url} target="_blank" rel="noopener noreferrer">
-                            <img src={s.url} alt={s.name} loading="lazy" />
+            <ul className="scan-gallery">
+                {(game.files?.scans ?? []).map(s => (
+                    <li key={s.url}>
+                        <a className="scan-item" href={s.url} target="_blank" rel="noopener noreferrer">
+                            <img src={s.url} alt="" loading="lazy" />
                             <span className="scan-caption">
                                 {s.type && <strong>{SCAN_TYPES[s.type] ?? s.type}</strong>}
                                 {s.name}
+                                <span className="sr-only">{NEW_TAB}</span>
                             </span>
                         </a>
-                    ))}
-                </div>
-            </>
+                    </li>
+                ))}
+            </ul>
         );
     }
 
@@ -452,15 +478,14 @@ function ModalContent({ plateKey, game }: { plateKey: string; game: Game }) {
         const pdf     = manuals.find(m => m.name.toLowerCase().endsWith('.pdf'));
         return (
             <>
-                <h2 className="modal-section-title">MANUAL_FILE</h2>
                 <div className="dump-block">
                     {manuals.map(m => <FileLine key={m.url} name={m.name} url={m.url} size={m.size} viewable />)}
                 </div>
                 {pdf && (
-                    <object className="manual-viewer" data={pdf.url} type="application/pdf" aria-label={pdf.name}>
+                    <object className="manual-viewer" data={pdf.url} type="application/pdf" aria-label={`Manuel : ${pdf.name}`}>
                         <p className="manual-fallback">
                             Aperçu indisponible dans ce navigateur :{' '}
-                            <a href={pdf.url} target="_blank" rel="noopener noreferrer">ouvrir {pdf.name}</a>
+                            <a href={pdf.url} target="_blank" rel="noopener noreferrer">ouvrir {pdf.name}<span className="sr-only">{NEW_TAB}</span></a>
                         </p>
                     </object>
                 )}
@@ -468,167 +493,212 @@ function ModalContent({ plateKey, game }: { plateKey: string; game: Game }) {
         );
     }
 
-    if (plateKey === 'compilation') {
-        return <CompilationModal game={game} />;
-    }
-    if (plateKey === 'compil_d7') {
-        return <CompilD7Modal game={game} />;
-    }
-    if (plateKey === 'compil_k7') {
-        return <CompilK7Modal game={game} />;
-    }
+    if (plateKey === 'compilation') return <CompilationModal game={game} />;
+    if (plateKey === 'compil_d7')   return <CompilSupportModal game={game} support="D7" />;
+    if (plateKey === 'compil_k7')   return <CompilSupportModal game={game} support="K7" />;
 
     if (plateKey === 'authors') {
         return (
-            <>
-                <h2 className="modal-section-title">PRODUCTION_STAFF</h2>
-                <ul>
-                    {(game.authors ?? []).map((a: GameAuthor, i: number) => (
-                        <li key={i}><strong>{a.role} :</strong> {a.name}</li>
-                    ))}
-                </ul>
-            </>
+            <ul className="modal-list">
+                {(game.authors ?? []).map((a: GameAuthor, i: number) => (
+                    <li key={i}><strong>{a.role} :</strong> {a.name}</li>
+                ))}
+            </ul>
         );
     }
 
     if (plateKey === 'tips') {
-        return (
-            <>
-                <h2 className="modal-section-title">POKES & ASTUCES</h2>
-                <ul>{(game.tips ?? []).map((t, i) => <li key={i}>{t}</li>)}</ul>
-            </>
-        );
+        return <ul className="modal-list">{(game.tips ?? []).map((t, i) => <li key={i}><Linkified text={t} /></li>)}</ul>;
     }
 
     if (plateKey === 'bugs') {
         return (
-            <>
-                <h2 className="modal-section-title">BUG_REPORT</h2>
-                <ul className="bug-list">
-                    {(game.bugs ?? []).map((b, i) => <li key={i}>⚠ {b}</li>)}
-                </ul>
-            </>
+            <ul className="modal-list bug-list">
+                {(game.bugs ?? []).map((b, i) => <li key={i}><span aria-hidden="true">⚠ </span><Linkified text={b} /></li>)}
+            </ul>
         );
     }
 
     if (plateKey === 'comments') {
         return (
             <>
-                <h2 className="modal-section-title">INTERNAL_LOGS</h2>
                 {(game.comments ?? []).map((c: GameComment, i: number) => (
                     <div key={i} className="dump-block">
                         {c.author  && <p><strong>{c.author}</strong></p>}
-                        {c.content && <p className="comment-quote">{c.content}</p>}
+                        {c.content && <p className="comment-quote"><Linkified text={c.content} /></p>}
                     </div>
                 ))}
             </>
         );
     }
 
-    return <p className="empty-sector">SECTOR_DATA_EMPTY</p>;
+    return null;
+}
+
+/**
+ * Fenêtre modale accessible : rôle dialog nommé par son titre, focus sur « Fermer » à
+ * l'ouverture, Échap pour fermer, reste de la page inerte (clavier et lecteurs d'écran
+ * restent dans la modale), défilement de la page bloqué.
+ */
+function Dialog({ code, title, onClose, children }: { code: string; title: string; onClose: () => void; children: ReactNode }) {
+    const rootRef  = useRef<HTMLDivElement>(null);
+    const closeRef = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        const root = rootRef.current;
+        const made: Element[] = [];
+        for (const el of Array.from(document.body.children)) {
+            if (el !== root && !el.hasAttribute('inert')) {
+                el.setAttribute('inert', '');
+                made.push(el);
+            }
+        }
+        const overflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        closeRef.current?.focus();
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                onClose();
+            }
+        };
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('keydown', onKey);
+            made.forEach(el => el.removeAttribute('inert'));
+            document.body.style.overflow = overflow;
+        };
+    }, [onClose]);
+
+    return (
+        <div className="dialog-root" ref={rootRef}>
+            <div className="puzzle-overlay active" onClick={onClose} />
+            <div className="puzzle-modal active" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+                <div className="modal-header">
+                    <h2 className="modal-sys-title" id="modal-title">
+                        <span className="modal-code" aria-hidden="true">{code}</span>
+                        {title}
+                    </h2>
+                    <button ref={closeRef} type="button" className="modal-close-btn" onClick={onClose}>
+                        <span aria-hidden="true">[×] </span>FERMER
+                    </button>
+                </div>
+                {/* Atteignable au clavier : on peut le faire défiler aux flèches */}
+                <div className="modal-body" tabIndex={0}>{children}</div>
+            </div>
+        </div>
+    );
 }
 
 /* ── Composant principal ── */
 export default function GameDetail({ game }: Props) {
     const [activeKey, setActiveKey] = useState<string | null>(null);
+    const openerRef = useRef<HTMLElement | null>(null);
 
     const systemId = 'ID_' + String(game.id).padStart(4, '0');
-    const yearStr  = game.release_year ? String(game.release_year) : '????';
-    const edStr    = game.editor ?? '???';
     const catStr   = game.categories?.length ? ' · ' + game.categories[0] : '';
-    const sub      = `${yearStr} — ${edStr}${catStr}`;
+    const sub      = `${yearLabel(game)} — ${editorLabel(game)}${catStr}`;
 
     const cover = game.files?.thumbnail ?? game.files?.scans?.[0]?.url;
 
-    const boolMap: Record<string, boolean> = {
-        DUMP:     (game.dumps?.length    ?? 0) > 0,
-        DOWNLOAD: (game.dumps ?? []).some(d => d.url) || otherReleaseFiles(game).length > 0,
-        SCANS:    (game.files?.scans?.length   ?? 0) > 0,
-        MANUAL:   (game.files?.manuals?.length ?? 0) > 0,
-        TIPS:     (game.tips?.length     ?? 0) > 0,
-        BUGS:     (game.bugs?.length     ?? 0) > 0,
-        COMMENTS: (game.comments?.length ?? 0) > 0,
-        AUTHORS:  (game.authors?.length  ?? 0) > 0,
-    };
+    // Contenu disponible : libellé en clair, signalé par un symbole et non par la seule couleur
+    const available: [string, boolean][] = [
+        ['Fichiers',       (game.dumps?.length ?? 0) > 0],
+        ['Téléchargement', (game.dumps ?? []).some(d => d.url) || otherReleaseFiles(game).length > 0],
+        ['Scans',          (game.files?.scans?.length   ?? 0) > 0],
+        ['Manuel',         (game.files?.manuals?.length ?? 0) > 0],
+        ['Astuces',        (game.tips?.length     ?? 0) > 0],
+        ['Bugs',           (game.bugs?.length     ?? 0) > 0],
+        ['Commentaires',   (game.comments?.length ?? 0) > 0],
+        ['Équipe',         (game.authors?.length  ?? 0) > 0],
+    ];
 
     const activePlates = PLATE_LAYOUT.filter(p => hasData(p.key, game));
-    const activeLabel  = PLATE_LAYOUT.find(p => p.key === activeKey)?.label ?? '';
+    const activePlate  = PLATE_LAYOUT.find(p => p.key === activeKey);
 
-    function closeModal() {
-        setActiveKey(null);
-        document.body.style.overflow = '';
-    }
-
-    function openModal(key: string) {
+    function openModal(key: string, opener: HTMLElement) {
+        openerRef.current = opener;
         setActiveKey(key);
-        document.body.style.overflow = 'hidden';
     }
+
+    const closeModal = useCallback(() => {
+        setActiveKey(null);
+        // Focus rendu au bouton qui a ouvert la modale (une fois la page réactivée)
+        requestAnimationFrame(() => openerRef.current?.focus());
+    }, []);
 
     return (
-        <>
+        <main id="contenu" className="detail-root">
             {/* ── HERO ── */}
             <div className="game-hero" id="game-hero">
                 <div className="game-hero-inner">
                     <div className={`game-hero-cover${cover ? ' game-hero-cover--image' : ''}`}>
-                        {cover ? <img src={cover} alt={game.main_title} /> : <span>📦</span>}
+                        {cover ? <img src={cover} alt={`Capture d’écran de ${game.main_title}`} /> : <span aria-hidden="true">📦</span>}
                     </div>
                     <div className="game-hero-meta">
-                        <div className="hero-system-id">{systemId}</div>
+                        <p className="hero-system-id"><span className="sr-only">Jeu n° </span>{systemId}</p>
                         <h1 className="hero-title">{game.main_title}</h1>
                         <p className="hero-sub">{sub}</p>
-                        <div className="hero-tags">
+                        <ul className="hero-tags" aria-label="Contenu de la fiche">
                             {game.origin === 'AI_ASSISTED' && (
-                                <span className="hero-tag hero-tag--ai" title="Jeu réalisé avec l'aide d'une IA">
-                                    IA ASSISTÉ
-                                </span>
+                                <li className="hero-tag hero-tag--ai">IA ASSISTÉ<span className="sr-only"> : jeu réalisé avec l’aide d’une IA</span></li>
                             )}
-                            {Object.entries(boolMap).map(([k, on]) => (
-                                <span key={k} className={`hero-tag${on ? ' hero-tag--on' : ''}`}>
-                                    {k}
-                                </span>
+                            {available.map(([label, on]) => (
+                                <li key={label} className={`hero-tag${on ? ' hero-tag--on' : ' hero-tag--off'}`}>
+                                    <span aria-hidden="true">{on ? '✓ ' : '– '}</span>
+                                    {label.toUpperCase()}
+                                    <span className="sr-only">{on ? ' : disponible' : ' : absent'}</span>
+                                </li>
                             ))}
-                        </div>
+                        </ul>
                     </div>
                 </div>
             </div>
 
             {/* ── BENTO ── */}
-            <main className="detail-main">
+            <div className="detail-main">
                 <div className="bento-puzzle">
                     {activePlates.map(p => (
-                        <div
+                        <section
                             key={p.key}
                             className={`metal-plate ${p.size}`}
-                            onClick={() => openModal(p.key)}
+                            aria-labelledby={`plate-${p.key}`}
+                            onClick={e => {
+                                // Clic à la souris n'importe où sur la plaque ; au clavier : le bouton
+                                const button = e.currentTarget.querySelector<HTMLElement>('.read-more-indicator');
+                                if (button) openModal(p.key, button);
+                            }}
                         >
-                            <div className="plate-label">{p.label}</div>
+                            <h2 className="plate-label" id={`plate-${p.key}`}>
+                                <span className="plate-code" aria-hidden="true">{p.code}</span>
+                                <span className="plate-name">{p.title}</span>
+                            </h2>
                             <div className="plate-content">
                                 <PlatePreview plateKey={p.key} game={game} />
                             </div>
-                            <div className="read-more-indicator">ACCESS DATA »</div>
-                        </div>
+                            <button
+                                type="button"
+                                className="read-more-indicator"
+                                aria-haspopup="dialog"
+                                onClick={e => {
+                                    e.stopPropagation();
+                                    openModal(p.key, e.currentTarget);
+                                }}
+                            >
+                                TOUT VOIR<span className="sr-only"> : {p.title}</span><span aria-hidden="true"> »</span>
+                            </button>
+                        </section>
                     ))}
                 </div>
-            </main>
+            </div>
 
             {/* ── MODALE ── */}
-            <div
-                className={`puzzle-overlay${activeKey ? ' active' : ''}`}
-                onClick={closeModal}
-            />
-            <div className={`puzzle-modal${activeKey ? ' active' : ''}`}>
-                <div className="modal-header">
-                    <span className="modal-sys-title">
-                        SECTOR :: {activeLabel}
-                    </span>
-                    <button className="modal-close-btn" onClick={closeModal}>
-                        [×] FERMER
-                    </button>
-                </div>
-                <div className="modal-body">
-                    {activeKey && <ModalContent plateKey={activeKey} game={game} />}
-                </div>
-            </div>
-        </>
+            {activePlate && createPortal(
+                <Dialog code={activePlate.code} title={activePlate.title} onClose={closeModal}>
+                    <ModalContent plateKey={activePlate.key} game={game} />
+                </Dialog>,
+                document.body,
+            )}
+        </main>
     );
 }

@@ -11,7 +11,64 @@
 .detail-page {
     background: var(--bg);
     min-height: 100vh;
+    /* Contraste ≥ 7:1 (WCAG AAA) sur --surface, sous les lignes CRT atténuées */
+    --text-dim:  #cfc8bf;   /* 8.1:1 */
+    --label:     #ffbaa9;   /* rouge brique éclairci, 8.1:1 */
+    --ai:        #dcbcf7;   /* violet IA, 8:1 */
+    --bug:       #ffb3b3;   /* 7.9:1 */
 }
+
+/* Lignes CRT atténuées sur la fiche : le texte garde son contraste ; aucune si l'utilisateur
+   demande plus de contraste */
+.detail-page #crt-overlay {
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent      0px,
+        transparent      2px,
+        rgba(0,0,0,0.06) 2px,
+        rgba(0,0,0,0.06) 4px
+    );
+}
+
+@media (prefers-contrast: more) {
+    .detail-page #crt-overlay { display: none; }
+}
+
+/* Texte réservé aux lecteurs d'écran */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Focus clavier bien visible (WCAG 2.4.13) */
+.detail-page :focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+}
+
+/* Lien d'évitement : visible au premier Tab */
+.skip-link {
+    position: absolute;
+    left: 1rem;
+    top: -100px;
+    z-index: 3000;
+    padding: 12px 18px;
+    background: var(--accent);
+    color: var(--accent-text);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.skip-link:focus { top: 1rem; }
+
+.detail-page a { color: var(--accent); text-underline-offset: 3px; }
 
 /* ============================================================
    VIEW TRANSITION — le hero est la cible du morphing
@@ -44,8 +101,8 @@
         0deg,
         transparent,
         transparent 2px,
-        rgba(0,0,0,0.06) 2px,
-        rgba(0,0,0,0.06) 4px
+        rgba(0,0,0,0) 2px,
+        rgba(0,0,0,0) 4px
     );
     pointer-events: none;
 }
@@ -102,12 +159,11 @@
 
 .hero-system-id {
     font-family: 'Courier New', monospace;
-    font-size: 0.65rem;
+    font-size: 0.85rem;
     color: var(--accent);
     letter-spacing: 3px;
     text-transform: uppercase;
     margin-bottom: 0.4rem;
-    opacity: 0.8;
 }
 
 .hero-title {
@@ -121,7 +177,7 @@
 }
 
 .hero-sub {
-    font-size: 0.85rem;
+    font-size: 1rem;
     color: var(--text-dim);
     margin: 0 0 1rem;
     font-family: 'Courier New', monospace;
@@ -130,31 +186,36 @@
 .hero-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
+    list-style: none;
 }
 
 .hero-tag {
     font-family: 'Courier New', monospace;
-    font-size: 0.6rem;
+    font-size: 0.85rem;
     letter-spacing: 1px;
-    padding: 3px 8px;
-    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border: 1px solid var(--border-hi);
     color: var(--text-dim);
-    opacity: 0.4;
     text-transform: uppercase;
+}
+
+/* Contenu absent : lisible, mais tiret et bordure pointillée (pas seulement la couleur) */
+.hero-tag--off {
+    border-style: dashed;
 }
 
 .hero-tag--on {
     border-color: var(--accent);
     color: var(--accent);
     opacity: 1;
-    background: rgba(var(--accent-rgb), 0.08);
+    background: rgba(0, 0, 0, 0.2);   /* fond assombri (et non teinté) : contraste ≥ 7:1 */
 }
 
 /* Jeu réalisé avec l'aide d'une IA */
 .hero-tag--ai {
-    border-color: #c8a2ec;
-    color: #c8a2ec;
+    border-color: var(--ai);
+    color: var(--ai);
     opacity: 1;
     background: rgba(200, 162, 236, 0.08);
 }
@@ -174,8 +235,16 @@
     perspective: 1500px;
 }
 
-.span-2 { grid-column: span 2; }
-.row-2  { grid-row: span 2; }
+/* Mobile : une colonne, chaque plaque en pleine largeur (aperçus lisibles en entier) */
+@media (max-width: 600px) {
+    .bento-puzzle { grid-template-columns: 1fr; }
+    .game-hero-inner { flex-direction: column; align-items: flex-start; gap: 1.25rem; }
+}
+
+@media (min-width: 601px) {
+    .span-2 { grid-column: span 2; }
+    .row-2  { grid-row: span 2; }
+}
 
 /* ── LA PLAQUE ── */
 .metal-plate {
@@ -199,13 +268,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 1px,
-        rgba(0,0,0,0.04) 1px,
-        rgba(0,0,0,0.04) 2px
-    );
+    background: none;
     pointer-events: none;
 }
 
@@ -225,28 +288,50 @@
     z-index: 2;
 }
 
-.metal-plate:hover {
+.metal-plate:hover,
+.metal-plate:focus-within {
     transform: translateZ(60px) scale(1.02);
     z-index: 100;
     border-color: var(--accent);
     box-shadow: 0 20px 50px rgba(0,0,0,0.9), 0 0 12px rgba(var(--accent-rgb), 0.5);
 }
 
+/* Titre de la plaque : code d'ambiance (décoratif) puis titre en clair */
 .plate-label {
-    padding: 14px 14px 4px;
+    padding: 14px 16px 4px;
     font-family: 'Courier New', monospace;
-    font-size: 0.62rem;
-    color: var(--accent2);
-    text-transform: uppercase;
-    letter-spacing: 2px;
     z-index: 3;
+    margin: 0;
 }
 
+.plate-code {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--label);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.plate-name {
+    display: block;
+    margin-top: 2px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+/* Aperçu : une partie du contenu, lisible sans ouvrir la plaque */
 .plate-content {
-    padding: 8px 14px;
+    padding: 8px 16px 12px;
     flex-grow: 1;
     z-index: 3;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text);
 }
+
+.plate-content > * + * { margin-top: 0.5rem; }
 
 .plate-title {
     font-size: 1.1rem;
@@ -254,38 +339,85 @@
     color: var(--text);
     margin: 0 0 0.3rem;
     text-transform: uppercase;
-    line-height: 1.2;
+    line-height: 1.3;
 }
 
 .plate-meta {
-    font-size: 0.72rem;
+    font-size: 0.9rem;
     color: var(--text-dim);
     font-family: 'Courier New', monospace;
     margin: 0;
 }
 
-.plate-empty {
-    font-size: 0.55rem;
-    color: var(--text-dim);
-    opacity: 0.25;
-    font-family: 'Courier New', monospace;
-    letter-spacing: 1px;
+.plate-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    list-style: none;
 }
 
+/* Extrait : quelques lignes, la suite dans la modale */
+.plate-excerpt {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+    line-clamp: 5;
+    overflow: hidden;
+    max-width: 70ch;
+}
+
+.plate-excerpt--short {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+}
+
+.plate-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.plate-list li {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.plate-key {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.plate-dim,
+.plate-more {
+    color: var(--text-dim);
+}
+
+/* « Tout voir » : vrai bouton, cible d'au moins 44 × 44 px */
 .read-more-indicator {
     align-self: flex-end;
-    font-family: monospace;
-    font-size: 0.58rem;
+    min-height: 44px;
+    min-width: 44px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
     color: var(--accent);
     background: rgba(0,0,0,0.4);
-    padding: 4px 10px;
-    border-top: 1px solid var(--border);
-    border-left: 1px solid var(--border);
+    padding: 0 16px;
+    border: none;
+    border-top: 1px solid var(--border-hi);
+    border-left: 1px solid var(--border-hi);
     letter-spacing: 1px;
+    cursor: pointer;
     z-index: 3;
 }
 
-.metal-plate:hover .read-more-indicator {
+/* Focus à l'intérieur de la plaque (dont le débordement est masqué) */
+.metal-plate .read-more-indicator:focus-visible { outline-offset: -4px; outline-color: var(--accent-text); }
+
+.metal-plate:hover .read-more-indicator,
+.read-more-indicator:focus-visible {
     background: var(--accent);
     color: var(--accent-text);
 }
@@ -307,7 +439,10 @@
 .puzzle-overlay.active {
     opacity: 1;
     pointer-events: all;
+    animation: overlay-in 0.3s ease both;
 }
+
+@keyframes overlay-in { from { opacity: 0; } }
 
 .puzzle-modal {
     position: fixed;
@@ -333,6 +468,11 @@
     opacity: 1;
     pointer-events: all;
     transform: translate(-50%, -50%) scale(1);
+    animation: modal-in 0.4s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+@keyframes modal-in {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.92); }
 }
 
 .modal-header {
@@ -347,20 +487,30 @@
 
 .modal-sys-title {
     font-family: 'Courier New', monospace;
-    font-size: 0.7rem;
+    font-size: 1.05rem;
+    color: var(--text);
+    margin: 0;
+}
+
+.modal-code {
+    display: block;
+    font-size: 0.8rem;
     color: var(--accent);
     letter-spacing: 3px;
     text-transform: uppercase;
 }
 
 .modal-close-btn {
+    min-height: 44px;
+    min-width: 44px;
     background: transparent;
     border: 1px solid var(--border-hi);
-    color: var(--text-dim);
+    color: var(--text);
     cursor: pointer;
-    padding: 5px 14px;
-    font-family: monospace;
-    font-size: 0.72rem;
+    padding: 0 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
     letter-spacing: 1px;
     transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
@@ -375,6 +525,8 @@
     flex: 1;
     overflow-y: auto;
     padding: 2rem 2.5rem;
+    font-size: 1rem;
+    line-height: 1.6;
     scrollbar-width: thin;
     scrollbar-color: var(--border-hi) transparent;
 }
@@ -398,7 +550,51 @@
     line-height: 1.7;
     color: var(--text);
     margin-bottom: 1.5rem;
+    max-width: 70ch;
 }
+
+/* Fiche : intitulé, valeur */
+.modal-facts {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px 16px;
+    margin-bottom: 1.5rem;
+}
+
+.modal-facts dt { font-weight: 700; color: var(--text); }
+.modal-facts dd { color: var(--text); }
+
+.modal-list {
+    padding-left: 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 70ch;
+}
+
+.modal-command { margin-bottom: 1.5rem; }
+
+/* Retours à la ligne et colonnes saisis dans le backoffice conservés (police à chasse fixe) */
+.modal-synopsis,
+.modal-notes,
+.modal-list li,
+.comment-quote,
+.plate-excerpt {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/* Notes (mode d'emploi, commandes) : texte droit, encadré */
+.modal-notes {
+    margin-top: 1.5rem;
+    padding: 16px 20px;
+    border: 1px solid var(--border-hi);
+    background: rgba(0,0,0,0.3);
+    color: var(--text);
+    line-height: 1.6;
+    max-width: 80ch;
+}
+.dump-item + .dump-item { margin-top: 0.75rem; }
 
 .modal-sep {
     border: 0;
@@ -414,8 +610,8 @@
 
 .modal-section-title {
     font-family: 'Courier New', monospace;
-    font-size: 0.8rem;
-    color: var(--accent2);
+    font-size: 0.9rem;
+    color: var(--label);
     letter-spacing: 3px;
     text-transform: uppercase;
     margin: 0 0 1.2rem;
@@ -425,7 +621,7 @@
 
 .modal-sub-title {
     font-family: 'Courier New', monospace;
-    font-size: 0.72rem;
+    font-size: 0.9rem;
     color: var(--accent);
     letter-spacing: 2px;
     text-transform: uppercase;
@@ -448,8 +644,8 @@
 }
 
 .dump-label {
-    color: var(--accent2);
-    font-size: 0.9rem;
+    color: var(--label);
+    font-size: 1rem;
     margin: 0 0 0.5rem;
 }
 
@@ -463,30 +659,35 @@
 .file-line {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
-    gap: 4px 12px;
+    align-items: center;
+    gap: 6px 12px;
     margin: 0 0 6px;
     overflow-wrap: anywhere;
 }
 
 .file-download {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     font-family: 'Courier New', monospace;
-    font-size: 0.68rem;
+    font-size: 0.85rem;
+    font-weight: 700;
     letter-spacing: 1px;
     color: var(--accent);
     border: 1px solid var(--accent);
-    padding: 2px 8px;
+    padding: 0 14px;
     text-decoration: none;
     white-space: nowrap;
     transition: background 0.2s, color 0.2s;
 }
 
-.file-download:hover {
+.file-download:hover,
+.file-download:focus-visible {
     background: var(--accent);
     color: var(--accent-text);
 }
 
-.file-size { opacity: 0.75; }
+.file-size { font-weight: 400; }
 
 /* ── Scans de boîte : aperçu dans la plaque, galerie dans la modale ── */
 .scan-strip {
@@ -505,6 +706,7 @@
 }
 
 .scan-gallery {
+    list-style: none;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 14px;
@@ -517,7 +719,7 @@
     text-decoration: none;
     color: var(--text-dim);
     font-family: 'Courier New', monospace;
-    font-size: 0.65rem;
+    font-size: 0.85rem;
     overflow-wrap: anywhere;
 }
 
@@ -571,7 +773,7 @@
 }
 
 .bug-list {
-    color: #e05555;
+    color: var(--bug);
     padding-left: 1.2rem;
 }
 
@@ -580,10 +782,11 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    min-height: 44px;
     text-decoration: none;
     color: var(--text-dim);
     font-family: 'Courier New', monospace;
-    font-size: 0.72rem;
+    font-size: 0.85rem;
     letter-spacing: 2px;
     text-transform: uppercase;
     padding: 6px 14px;
@@ -620,4 +823,20 @@
 
 @media (min-width: 901px) {
     .bento-puzzle { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ============================================================
+   MOUVEMENTS RÉDUITS (WCAG 2.3.3) : ni zoom des plaques, ni animation de la modale
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+    .metal-plate,
+    .metal-plate:hover,
+    .metal-plate:focus-within {
+        transform: none;
+        transition: border-color 0.2s;
+    }
+    .puzzle-overlay.active,
+    .puzzle-modal.active {
+        animation: none;
+    }
 }
