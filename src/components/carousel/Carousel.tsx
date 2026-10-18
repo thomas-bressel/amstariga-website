@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { GameListItem } from '../../share/types/game';
+import { machineBadge } from '../../share/utils/machines';
 import { thumbnailPath } from '../../share/utils/thumbnail';
 import './Carousel.css';
 
@@ -323,6 +324,9 @@ export default function Carousel({ games, total, initialIndex = 0, topOffset = 0
                     {active.main_title}
                     {active.origin === 'AI_ASSISTED' && (
                         <span className="carousel-ai-badge" title="Jeu réalisé avec l'aide d'une IA">IA</span>
+                    )}
+                    {machineBadge(active.machine) && (
+                        <span className="carousel-machine-badge" title={active.machine_name}>{machineBadge(active.machine)}</span>
                     )}
                 </span>
                 <span className="carousel-game-sub">{active.release_year}</span>

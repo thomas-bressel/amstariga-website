@@ -16,6 +16,7 @@
     --label:     #ffbaa9;   /* rouge brique éclairci, 8.1:1 */
     --ai:        #dcbcf7;   /* violet IA, 8:1 */
     --iso:       #a8e6f5;   /* cyan 3D isométrique */
+    --machine:   #f2d68a;   /* or : machine du jeu (CPC, Plus, GX4000) */
     --bug:       #ffb3b3;   /* 7.9:1 */
 }
 
@@ -219,6 +220,13 @@
     color: var(--ai);
     opacity: 1;
     background: rgba(200, 162, 236, 0.08);
+}
+
+.hero-tag--machine {
+    border-color: var(--machine);
+    color: var(--machine);
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.2);
 }
 
 .hero-tag--iso {

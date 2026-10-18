@@ -664,6 +664,9 @@ export default function GameDetail({ game }: Props) {
                         <h1 className="hero-title">{game.main_title}</h1>
                         <p className="hero-sub">{sub}</p>
                         <ul className="hero-tags" aria-label="Contenu de la fiche">
+                            {game.machine_name && (
+                                <li className="hero-tag hero-tag--machine"><span className="sr-only">Machine : </span>{game.machine_name.toUpperCase()}</li>
+                            )}
                             {game.origin === 'AI_ASSISTED' && (
                                 <li className="hero-tag hero-tag--ai">IA ASSISTÉ<span className="sr-only"> : jeu réalisé avec l’aide d’une IA</span></li>
                             )}
