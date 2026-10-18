@@ -33,6 +33,7 @@ jobs:
         no-cache: true
         build-args: |
           APP_ENV=production
+          PUBLIC_API_URL=https://api.amstariga.fr
         tags: |
           ${{ secrets.DOCKERHUB_USERNAME }}/amstariga-website:production
           ${{ secrets.DOCKERHUB_USERNAME }}/amstariga-website:${{ github.sha }}
