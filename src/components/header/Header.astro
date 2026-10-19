@@ -85,7 +85,7 @@ import './TapeCounter.css';
         <span class="filter-header-badge" id="filter-header-badge-m" style="display:none"></span>
       </button>
       <div class="view-toggle">
-        <button class="view-btn" data-view="grid">
+        <button class="view-btn" data-view="grid" aria-label="Vue en grille" title="Vue en grille">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="7" height="7"></rect>
             <rect x="14" y="3" width="7" height="7"></rect>
@@ -93,7 +93,7 @@ import './TapeCounter.css';
             <rect x="3" y="14" width="7" height="7"></rect>
           </svg>
         </button>
-        <button class="view-btn" data-view="cover">
+        <button class="view-btn" data-view="cover" aria-label="Vue en carrousel" title="Vue en carrousel">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
             <circle cx="12" cy="12" r="3"></circle>
@@ -121,8 +121,16 @@ import './TapeCounter.css';
         <span class="filter-header-lbl">FILTRES</span>
         <span class="filter-header-badge" id="filter-header-badge" style="display:none"></span>
       </button>
+      <!-- Molette : taille des vignettes (grille et carrousel), ordinateur seulement -->
+      <div class="zoom-knob" id="zoom-knob" role="slider" tabindex="0"
+           aria-label="Taille des vignettes" aria-valuemin="70" aria-valuemax="150"
+           aria-valuenow="100" aria-valuetext="100 %"
+           title="Taille des vignettes : molette, glisser ou flèches ; double-clic : 100 %">
+        <span class="zoom-knob-dial" aria-hidden="true"><span class="zoom-knob-mark"></span></span>
+        <span class="zoom-knob-value" aria-hidden="true">100%</span>
+      </div>
       <div class="view-toggle">
-        <button class="view-btn" data-view="grid">
+        <button class="view-btn" data-view="grid" aria-label="Vue en grille" title="Vue en grille">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="7" height="7"></rect>
             <rect x="14" y="3" width="7" height="7"></rect>
@@ -130,7 +138,7 @@ import './TapeCounter.css';
             <rect x="3" y="14" width="7" height="7"></rect>
           </svg>
         </button>
-        <button class="view-btn" data-view="cover">
+        <button class="view-btn" data-view="cover" aria-label="Vue en carrousel" title="Vue en carrousel">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
             <circle cx="12" cy="12" r="3"></circle>
@@ -186,6 +194,73 @@ import './TapeCounter.css';
       if (btn) btn.classList.toggle('has-active', count > 0);
     });
   });
+
+  // Molette ZOOM : taille des vignettes de la grille et du carrousel (--thumb-zoom, utilisée
+  // à partir de 769 px), gardée dans localStorage et relue au chargement
+  (function () {
+    var MIN = 70, MAX = 150, STEP = 10, KEY = 'amstariga_zoom';
+    var knob = document.getElementById('zoom-knob');
+    var zoom = 100;
+    try {
+      var saved = parseInt(localStorage.getItem(KEY), 10);
+      if (saved >= MIN && saved <= MAX) zoom = saved;
+    } catch (e) {}
+
+    function apply(value, save) {
+      var next = Math.max(MIN, Math.min(MAX, Math.round(value / STEP) * STEP));
+      var changed = next !== zoom;
+      zoom = next;
+      document.documentElement.style.setProperty('--thumb-zoom', String(zoom / 100));
+      if (knob) {
+        knob.setAttribute('aria-valuenow', String(zoom));
+        knob.setAttribute('aria-valuetext', zoom + ' %');
+        knob.querySelector('.zoom-knob-value').textContent = zoom + '%';
+        // De -135° (70 %) à +135° (150 %)
+        knob.style.setProperty('--knob-angle', ((zoom - MIN) / (MAX - MIN) * 270 - 135) + 'deg');
+      }
+      if (save && changed) {
+        try { localStorage.setItem(KEY, String(zoom)); } catch (e) {}
+        window.dispatchEvent(new CustomEvent('retro:zoom', { detail: { zoom: zoom / 100 } }));
+      }
+    }
+    apply(zoom, false);
+    if (!knob) return;
+
+    // Molette de la souris : un cran = un pas ; pavé tactile : un pas tous les 100 px
+    var rest = 0;
+    knob.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      var px = e.deltaMode === 0 ? e.deltaY : e.deltaY * 33;
+      if (Math.abs(px) >= 40) { rest = 0; apply(zoom - Math.sign(px) * STEP, true); return; }
+      rest += px;
+      if (Math.abs(rest) >= 100) { apply(zoom - Math.sign(rest) * STEP, true); rest = 0; }
+    }, { passive: false });
+
+    // Glisser vers le haut ou la droite : plus grand (un pas tous les 15 px)
+    var drag = null;
+    knob.addEventListener('pointerdown', function (e) {
+      drag = { x: e.clientX, y: e.clientY, from: zoom };
+      knob.setPointerCapture(e.pointerId);
+    });
+    knob.addEventListener('pointermove', function (e) {
+      if (!drag) return;
+      var d = (drag.y - e.clientY) + (e.clientX - drag.x);
+      apply(drag.from + Math.round(d / 15) * STEP, true);
+    });
+    ['pointerup', 'pointercancel'].forEach(function (type) {
+      knob.addEventListener(type, function () { drag = null; });
+    });
+
+    knob.addEventListener('dblclick', function () { apply(100, true); });
+    knob.addEventListener('keydown', function (e) {
+      var keys = { ArrowUp: STEP, ArrowRight: STEP, ArrowDown: -STEP, ArrowLeft: -STEP, PageUp: 2 * STEP, PageDown: -2 * STEP };
+      if (e.key in keys) apply(zoom + keys[e.key], true);
+      else if (e.key === 'Home') apply(MIN, true);
+      else if (e.key === 'End') apply(MAX, true);
+      else return;
+      e.preventDefault();
+    });
+  })();
 
   document.querySelectorAll('.view-btn[data-view]').forEach(function (btn) {
     btn.addEventListener('click', function () {
