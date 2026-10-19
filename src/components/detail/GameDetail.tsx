@@ -2,7 +2,7 @@ import { Fragment, useCallback, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchGames } from '../../share/models/games';
-import type { Game, GameDump, GameAuthor, GameComment, GameFile, GameBug } from '../../share/types/game';
+import type { Game, GameDump, GameAuthor, GameComment, GameFile, GameBug, GameTip } from '../../share/types/game';
 
 interface Props {
     game: Game;
@@ -156,10 +156,15 @@ function hasData(key: string, game: Game): boolean {
     if (key === 'compil_d7')   return isCompilation(game) && (game.dumps ?? []).some(d => d.category.startsWith('D7'));
     if (key === 'compil_k7')   return isCompilation(game) && (game.dumps ?? []).some(d => d.category.startsWith('K7'));
     if (key === 'authors')     return (game.authors?.length  ?? 0) > 0;
-    if (key === 'tips')        return (game.tips?.length     ?? 0) > 0;
+    if (key === 'tips')        return tipEntries(game).length > 0;
     if (key === 'bugs')        return bugReports(game).length > 0;
     if (key === 'comments')    return (game.comments?.length ?? 0) > 0;
     return false;
+}
+
+/** Astuces : détaillées (texte, image) si l'API les donne, sinon leurs seuls textes */
+function tipEntries(game: Game): GameTip[] {
+    return game.tip_entries ?? (game.tips ?? []).map(text => ({ text }));
 }
 
 /** Bugs connus : détaillés (édition, capture) si l'API les donne, sinon leurs seules descriptions */
@@ -275,7 +280,7 @@ function PlatePreview({ plateKey, game }: { plateKey: string; game: Game }) {
     }
     if (plateKey === 'tips' || plateKey === 'bugs') {
         const items = plateKey === 'tips'
-            ? game.tips ?? []
+            ? tipEntries(game).map(t => t.text ?? 'Plan / image')
             : bugReports(game).map(b => b.description ?? 'Capture d’écran du bug');
         return (
             <>
@@ -515,20 +520,38 @@ function ModalContent({ plateKey, game }: { plateKey: string; game: Game }) {
     }
 
     if (plateKey === 'tips') {
-        return <ul className="modal-list">{(game.tips ?? []).map((t, i) => <li key={i}><Linkified text={t} /></li>)}</ul>;
+        return (
+            <ul className="note-cards">
+                {tipEntries(game).map((t, i) => (
+                    <li key={i} className="note-card note-card--tip">
+                        {t.text && <p className="note-text"><Linkified text={t.text} /></p>}
+                        {t.image && (
+                            <a className="note-image" href={t.image} target="_blank" rel="noopener noreferrer">
+                                <img
+                                    src={t.image}
+                                    alt={t.text ? `Image de l’astuce : ${t.text.split('\n')[0]}` : `Plan ou carte de ${game.main_title}`}
+                                    loading="lazy"
+                                />
+                                <span className="sr-only">{NEW_TAB}</span>
+                            </a>
+                        )}
+                    </li>
+                ))}
+            </ul>
+        );
     }
 
     if (plateKey === 'bugs') {
         return (
-            <ul className="bug-reports">
+            <ul className="note-cards">
                 {bugReports(game).map((b, i) => (
-                    <li key={i} className="bug-report">
+                    <li key={i} className="note-card note-card--bug">
                         {b.description && (
-                            <p className="bug-text"><span aria-hidden="true">⚠ </span><Linkified text={b.description} /></p>
+                            <p className="note-text"><span aria-hidden="true">⚠ </span><Linkified text={b.description} /></p>
                         )}
-                        <p className="bug-release">{b.release ? `Édition : ${b.release}` : 'Toutes les éditions'}</p>
+                        <p className="note-meta">{b.release ? `Édition : ${b.release}` : 'Toutes les éditions'}</p>
                         {b.screenshot && (
-                            <a className="bug-shot" href={b.screenshot} target="_blank" rel="noopener noreferrer">
+                            <a className="note-image" href={b.screenshot} target="_blank" rel="noopener noreferrer">
                                 <img
                                     src={b.screenshot}
                                     alt={`Capture d’écran du bug${b.description ? ` : ${b.description.split('\n')[0]}` : ''}`}
@@ -631,7 +654,7 @@ export default function GameDetail({ game }: Props) {
         ['Téléchargement', (game.dumps ?? []).some(d => d.url) || otherReleaseFiles(game).length > 0],
         ['Scans',          (game.files?.scans?.length   ?? 0) > 0],
         ['Manuel',         (game.files?.manuals?.length ?? 0) > 0],
-        ['Astuces',        (game.tips?.length     ?? 0) > 0],
+        ['Astuces',        tipEntries(game).length > 0],
         ['Bugs',           bugReports(game).length > 0],
         ['Commentaires',   (game.comments?.length ?? 0) > 0],
         ['Équipe',         (game.authors?.length  ?? 0) > 0],

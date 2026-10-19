@@ -118,6 +118,8 @@ export interface Game extends GameListItem {
     authors?:      GameAuthor[];
     dumps?:        GameDump[];
     tips?:         string[];
+    /** Astuces détaillées : texte, image (plan, carte…) ou les deux (remplace tips). */
+    tip_entries?:  GameTip[];
     bugs?:         string[];
     /** Bugs détaillés : édition concernée et capture d'écran (remplace bugs). */
     bug_reports?:  GameBug[];
@@ -134,4 +136,11 @@ export interface GameBug {
     release?: string;
     /** Capture d'écran sur le serveur (/uploads/…). */
     screenshot?: string;
+}
+
+/** Astuce d'un jeu : texte, image (plan, carte…) ou les deux. */
+export interface GameTip {
+    text?: string;
+    /** Image sur le serveur (/uploads/…). */
+    image?: string;
 }
