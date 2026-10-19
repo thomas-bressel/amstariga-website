@@ -788,8 +788,8 @@
     line-height: 1.6;
 }
 
-/* Bugs connus : description, édition concernée, capture d'écran */
-.bug-reports {
+/* Bugs connus et astuces : texte, image (capture, plan, carte…) */
+.note-cards {
     list-style: none;
     display: flex;
     flex-direction: column;
@@ -797,36 +797,40 @@
     max-width: 80ch;
 }
 
-.bug-report {
+.note-card {
     padding: 14px 18px;
     border: 1px solid var(--border-hi);
-    border-left: 3px solid var(--bug);
+    border-left: 3px solid var(--accent);
     background: rgba(0, 0, 0, 0.25);
 }
 
-.bug-text {
+.note-card--bug { border-left-color: var(--bug); }
+
+.note-text {
     color: var(--text);
     line-height: 1.6;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
 
-.bug-text > span[aria-hidden] { color: var(--bug); }
+.note-card--bug .note-text > span[aria-hidden] { color: var(--bug); }
 
-.bug-release {
+.note-meta {
     margin-top: 6px;
     color: var(--text-dim);
     font-family: 'Courier New', monospace;
     font-size: 0.85rem;
 }
 
-.bug-shot {
+.note-image {
     display: inline-block;
     margin-top: 12px;
     max-width: 100%;
 }
 
-.bug-shot img {
+.note-card > .note-image:first-child { margin-top: 0; }   /* image seule */
+
+.note-image img {
     display: block;
     max-width: 100%;
     max-height: 400px;
@@ -835,8 +839,11 @@
     transition: border-color 0.2s;
 }
 
-.bug-shot:hover img,
-.bug-shot:focus-visible img { border-color: var(--accent); }
+/* Plan, carte : plus grand qu'une capture */
+.note-card--tip .note-image img { max-height: 560px; }
+
+.note-image:hover img,
+.note-image:focus-visible img { border-color: var(--accent); }
 
 /* ── Bouton retour dans le header ── */
 .back-btn {
