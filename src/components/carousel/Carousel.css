@@ -16,6 +16,8 @@
     padding: 2rem 0 1rem;
     user-select: none;
     overflow: visible;
+    /* Au doigt : défilement vertical de la page, glissé horizontal pour le carrousel */
+    touch-action: pan-y;
 
     opacity: 0;
     transform: translateY(40px);
@@ -54,7 +56,8 @@
     align-items: center;
     justify-content: center;
     font-size: 5rem;
-    transition: border-color 0.3s, box-shadow 0.3s, filter 0.3s, opacity 0.25s;
+    /* Position et opacité : calculées à chaque image pendant le défilement (Carousel.tsx) */
+    transition: border-color 0.3s, box-shadow 0.3s, filter 0.3s;
 }
 
 /* Face avant de la boîte, sinon vignette du jeu, sinon carton */
@@ -87,7 +90,15 @@
     background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 50%, transparent 100%);
     filter: blur(12px);
     border-radius: 0 0 40% 40%;
-    transition: opacity 0.3s;
+}
+
+/* Ordinateur : aperçus un peu plus grands (proportions d'une boîte de jeu gardées) ; à partir
+   de 1200 px, l'écart entre deux cartes de la roue laisse la place */
+@media (min-width: 1200px) {
+    .carousel-scene { height: 480px; }
+    .carousel-wheel,
+    .carousel-item,
+    .carousel-shadow { width: 200px; height: 300px; }
 }
 
 .carousel-item.is-active {
