@@ -22,11 +22,25 @@ const SNAP_DELAY_MS = 140;
 /** How far (in cards) the target may run ahead of the carousel (fast wheel). */
 const MAX_AHEAD = 8;
 
-/** Returns radius and slot offsets based on viewport width. */
-function getLayout(width: number): { radius: number; slots: number[] } {
-    if (width >= 1600) return { radius: 900, slots: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5] };
-    if (width >= 1200) return { radius: 750, slots: [-4, -3, -2, -1, 0, 1, 2, 3, 4] };
-    return                     { radius: 600, slots: [-3, -2, -1, 0, 1, 2, 3] };
+/** Size of the thumbnails chosen with the header knob (localStorage, 1 = 100 %). */
+function savedZoom(): number {
+    try {
+        const zoom = parseInt(localStorage.getItem('amstariga_zoom') ?? '', 10) / 100;
+        return zoom >= 0.7 && zoom <= 1.5 ? zoom : 1;
+    } catch {
+        return 1;
+    }
+}
+
+/**
+ * Returns radius and slot offsets based on viewport width. On desktop (769 px and more) the
+ * cards follow the zoom of the header knob, and so does the radius of the wheel.
+ */
+function getLayout(width: number, zoom = 1): { radius: number; slots: number[] } {
+    const scale = width >= 769 ? zoom : 1;
+    if (width >= 1600) return { radius: 900 * scale, slots: [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5] };
+    if (width >= 1200) return { radius: 750 * scale, slots: [-4, -3, -2, -1, 0, 1, 2, 3, 4] };
+    return                     { radius: 600 * scale, slots: [-3, -2, -1, 0, 1, 2, 3] };
 }
 
 /** Positive modulo: game index of an unbounded carousel position. */
@@ -144,11 +158,21 @@ export default function Carousel({ games, total, initialIndex = 0, topOffset = 0
     }, []);
 
     useEffect(() => {
-        setLayout(getLayout(window.innerWidth));
+        let zoom = savedZoom();
+        setLayout(getLayout(window.innerWidth, zoom));
         reducedMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const onResize = () => setLayout(getLayout(window.innerWidth));
+        const onResize = () => setLayout(getLayout(window.innerWidth, zoom));
+        // Molette du header : nouvelle taille des cartes
+        const onZoom = (e: Event) => {
+            zoom = (e as CustomEvent<{ zoom: number }>).detail.zoom;
+            setLayout(getLayout(window.innerWidth, zoom));
+        };
         window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
+        window.addEventListener('retro:zoom', onZoom);
+        return () => {
+            window.removeEventListener('resize', onResize);
+            window.removeEventListener('retro:zoom', onZoom);
+        };
     }, []);
 
     const { slots } = layout;

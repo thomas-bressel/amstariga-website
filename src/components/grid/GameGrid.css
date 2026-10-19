@@ -575,8 +575,10 @@
     .active-filters-strip { padding: 7px 2.5rem; }
     .main-content         { padding: 2rem 2.5rem 8rem; }
     .screenshot-grid      { grid-template-columns: repeat(3, 1fr); }
-    /* Ordinateur : vignettes espacées, sans fond gris entre elles */
-    .games-container      { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; background: none; }
+    /* Ordinateur : vignettes espacées, sans fond gris entre elles, à la taille choisie avec la
+       molette du header (--thumb-zoom) */
+    .games-container      { grid-template-columns: repeat(auto-fill, minmax(calc(280px * var(--thumb-zoom, 1)), 1fr)); gap: 10px; background: none; }
+    .game-screenshot      { height: calc(150px * var(--thumb-zoom, 1)); }
 
     .filter-sheet {
         left: 50%; right: auto; width: 500px;
