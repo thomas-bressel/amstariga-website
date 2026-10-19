@@ -269,6 +269,73 @@
     color: var(--text);
 }
 
+/* ── MOLETTE ZOOM (taille des vignettes) ── */
+.zoom-knob {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: ns-resize;
+    user-select: none;
+    touch-action: none;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+}
+
+.zoom-knob:focus-visible {
+    outline: 3px solid var(--green);
+    outline-offset: 3px;
+}
+
+/* Bouton crénelé, tourné selon le zoom ; repère vert */
+.zoom-knob-dial {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--border-hi);
+    background: repeating-conic-gradient(#3a3632 0deg 6deg, #24221f 6deg 12deg);
+    box-shadow:
+        inset 0 2px 3px rgba(255, 255, 255, 0.08),
+        inset 0 -3px 4px rgba(0, 0, 0, 0.6),
+        0 2px 4px rgba(0, 0, 0, 0.6);
+    transform: rotate(var(--knob-angle, 0deg));
+    transition: transform 0.15s ease-out, border-color 0.2s;
+}
+
+.zoom-knob-dial::after {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #4a4642, #1e1c1a);
+}
+
+.zoom-knob-mark {
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    width: 2px;
+    height: 9px;
+    margin-left: -1px;
+    border-radius: 1px;
+    background: var(--green);
+    box-shadow: 0 0 4px var(--green);
+    z-index: 1;
+}
+
+.zoom-knob:hover .zoom-knob-dial { border-color: var(--text-dim); }
+
+.zoom-knob-value {
+    min-width: 4ch;
+    text-align: right;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .zoom-knob-dial { transition: none; }
+}
+
 /* ── TOUCHE ESC ── */
 .esc-btn {
     font-family: var(--font-mono);

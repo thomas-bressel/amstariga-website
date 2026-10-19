@@ -92,13 +92,22 @@
     border-radius: 0 0 40% 40%;
 }
 
-/* Ordinateur : aperçus un peu plus grands (proportions d'une boîte de jeu gardées) ; à partir
-   de 1200 px, l'écart entre deux cartes de la roue laisse la place */
-@media (min-width: 1200px) {
-    .carousel-scene { height: 480px; }
+/* Ordinateur : taille choisie avec la molette du header (--thumb-zoom) ; le rayon de la roue
+   suit (Carousel.tsx) */
+@media (min-width: 769px) {
+    .carousel-scene { height: calc(420px * var(--thumb-zoom, 1)); }
     .carousel-wheel,
     .carousel-item,
-    .carousel-shadow { width: 200px; height: 300px; }
+    .carousel-shadow { width: calc(180px * var(--thumb-zoom, 1)); height: calc(260px * var(--thumb-zoom, 1)); }
+}
+
+/* Aperçus un peu plus grands (proportions d'une boîte de jeu gardées) ; à partir de 1200 px,
+   l'écart entre deux cartes de la roue laisse la place */
+@media (min-width: 1200px) {
+    .carousel-scene { height: calc(480px * var(--thumb-zoom, 1)); }
+    .carousel-wheel,
+    .carousel-item,
+    .carousel-shadow { width: calc(200px * var(--thumb-zoom, 1)); height: calc(300px * var(--thumb-zoom, 1)); }
 }
 
 .carousel-item.is-active {
