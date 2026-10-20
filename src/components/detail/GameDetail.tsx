@@ -647,6 +647,7 @@ export default function GameDetail({ game }: Props) {
     const sub      = `${yearLabel(game)} — ${editorLabel(game)}${catStr}`;
 
     const cover = game.files?.thumbnail ?? game.files?.scans?.[0]?.url;
+    const screenshots = game.screenshots ?? [];
 
     // Contenu disponible : libellé en clair, signalé par un symbole et non par la seule couleur
     const available: [string, boolean][] = [
@@ -658,6 +659,7 @@ export default function GameDetail({ game }: Props) {
         ['Bugs',           bugReports(game).length > 0],
         ['Commentaires',   (game.comments?.length ?? 0) > 0],
         ['Équipe',         (game.authors?.length  ?? 0) > 0],
+        ['Galerie',        screenshots.length > 0],
     ];
 
     const activePlates = PLATE_LAYOUT.filter(p => hasData(p.key, game));
@@ -743,6 +745,26 @@ export default function GameDetail({ game }: Props) {
                         </section>
                     ))}
                 </div>
+
+                {/* ── GALERIE D'ÉCRANS : en fin de fiche, les informations d'abord ── */}
+                {screenshots.length > 0 && (
+                    <section className="game-gallery" aria-labelledby="gallery-title">
+                        <h2 className="gallery-title" id="gallery-title">
+                            <span className="gallery-code" aria-hidden="true">SCREEN_GALLERY</span>
+                            Galerie d’écrans
+                        </h2>
+                        <ul className="gallery-grid">
+                            {screenshots.map((src, i) => (
+                                <li key={src}>
+                                    <a className="gallery-item" href={src} target="_blank" rel="noopener noreferrer">
+                                        <img src={src} alt={`Écran ${i + 1} sur ${screenshots.length} de ${game.main_title}`} loading="lazy" />
+                                        <span className="sr-only">{NEW_TAB}</span>
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
             </div>
 
             {/* ── MODALE ── */}
