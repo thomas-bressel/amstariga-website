@@ -1,17 +1,5 @@
 import type { GameListItem } from '../types/game';
-
-/**
- * Converts a category name to its slugified folder name.
- * Matches the logic in backoffice/src/scraper/images.py::slugify().
- */
-function slugify(text: string): string {
-    return text
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '');
-}
+import { slugify } from './slug';
 
 /**
  * Returns the path to the thumbnail for a game, relative to the uploads root. The API gives it

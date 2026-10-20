@@ -3,6 +3,7 @@ import DetailLayout from '../../layouts/DetailLayout.astro';
 import GameDetail from '../../components/detail/GameDetail';
 import '../../components/detail/Detail.css';
 import { getDetailData } from '../../controllers/detail.controller';
+import { gameUrl } from '../../share/utils/slug';
 
 const { id } = Astro.params;
 const gameId  = parseInt(id ?? '', 10);
@@ -18,9 +19,22 @@ try {
     return Astro.redirect('/');
 }
 
+// Adresse officielle : numéro et titre (/game/20014-papy-commando). Ancienne adresse (numéro seul)
+// ou titre changé depuis : redirection définitive, les anciens liens restent valables
+const canonical = gameUrl(game);
+if (Astro.url.pathname !== canonical) {
+    return Astro.redirect(canonical, 301);
+}
+
+// Adresse complète pour les moteurs de recherche : nginx (VPS) transmet l'hôte et le protocole
+// d'origine (https), le site ne voyant que la connexion http depuis nginx
+const protocol = Astro.request.headers.get('x-forwarded-proto') ?? Astro.url.protocol.replace(':', '');
+const host     = Astro.request.headers.get('host') ?? Astro.url.host;
+const canonicalUrl = `${protocol}://${host}${canonical}`;
+
 const title = `AmstArigA — ${game.main_title}`;
 ---
 
-<DetailLayout title={title} gameId={gameId}>
+<DetailLayout title={title} gameId={gameId} canonical={canonicalUrl}>
     <GameDetail game={game} client:load />
 </DetailLayout>
