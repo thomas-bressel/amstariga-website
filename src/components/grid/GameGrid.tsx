@@ -3,6 +3,7 @@ import { fetchAvailableLanguages, fetchAvailableYears, fetchGames, fetchGamesCou
 import type { GameFilters, GameListItem, GameOrigin, Language } from '../../share/types/game';
 import { FILTER_PARAMS, hasActiveFilters } from '../../share/utils/filters';
 import { MACHINES, machineBadge } from '../../share/utils/machines';
+import { gameUrl } from '../../share/utils/slug';
 import { thumbnailPath } from '../../share/utils/thumbnail';
 import Carousel from '../carousel/Carousel';
 import SearchBar from './SearchBar';
@@ -626,7 +627,7 @@ export default function GameGrid({ initialGames, initialTotal, initialFilters }:
             ) : (
                 <div className="games-container" style={{ marginTop: stickyH }}>
                     {games.map(game => (
-                        <a key={game.id} className="game-card screenshot-mode" href={`/game/${game.id}`}>
+                        <a key={game.id} className="game-card screenshot-mode" href={gameUrl(game)}>
                             <div className="game-screenshot">
                                 <img
                                     src={thumbnailPath(game)}

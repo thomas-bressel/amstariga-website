@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchGames } from '../../share/models/games';
 import type { Game, GameDump, GameAuthor, GameComment, GameFile, GameBug, GameTip } from '../../share/types/game';
+import { gameUrl } from '../../share/utils/slug';
 
 interface Props {
     game: Game;
@@ -339,7 +340,7 @@ function CompilationModal({ game }: { game: Game }) {
                 return (
                     <div key={name} className="dump-block">
                         <h3 className="dump-label">
-                            {id != null ? <a href={`/game/${id}`}>{name} →</a> : name}
+                            {id != null ? <a href={gameUrl({ id, main_title: name })}>{name} →</a> : name}
                         </h3>
                         <p>Support : {[...info.categories].join(' · ')}</p>
                         {info.command && <p>Commande : <code>{info.command}</code></p>}
@@ -383,7 +384,7 @@ function CompilSupportModal({ game, support }: { game: Game; support: 'D7' | 'K7
                 {commandLine}
                 {members.map((m, i) => (
                     <div key={m.id} className="dump-block">
-                        <h3 className="dump-label"><a href={`/game/${m.id}`}>{m.title} →</a></h3>
+                        <h3 className="dump-label"><a href={gameUrl({ id: m.id, main_title: m.title })}>{m.title} →</a></h3>
                         {(byMember[i + 1] ?? []).map((d, j) => (
                             <FileLine key={j} name={d.file_name} url={d.url} size={d.size} />
                         ))}

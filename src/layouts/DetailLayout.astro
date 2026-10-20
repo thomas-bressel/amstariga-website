@@ -6,9 +6,11 @@ import ThemeInit from '../components/boot/ThemeInit.astro';
 interface Props {
     title?: string;
     gameId?: number;
+    /** Adresse officielle de la page (moteurs de recherche) */
+    canonical?: string;
 }
 
-const { title = 'AmstArigA — Fiche jeu', gameId } = Astro.props;
+const { title = 'AmstArigA — Fiche jeu', gameId, canonical } = Astro.props;
 ---
 <!doctype html>
 <html lang="fr">
@@ -17,6 +19,7 @@ const { title = 'AmstArigA — Fiche jeu', gameId } = Astro.props;
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="icon" href="/favicon.ico" />
         <title>{title}</title>
+        {canonical && <link rel="canonical" href={canonical} />}
         <style>
             @media (prefers-reduced-motion: no-preference) {
                 ::view-transition-old(game-card) {
