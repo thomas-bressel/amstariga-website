@@ -894,6 +894,60 @@
 }
 
 /* ============================================================
+   GALERIE D'ÉCRANS — en fin de fiche, sur la largeur de la grille des plaques ;
+   2 colonnes sur ordinateur (écrans assez grands pour y voir), 1 sur mobile
+   ============================================================ */
+.game-gallery {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
+    background: #0a0a0a;
+}
+
+.gallery-title {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    color: var(--text);
+}
+
+.gallery-code {
+    font-size: 0.8rem;
+    letter-spacing: 3px;
+    color: var(--label);
+}
+
+.gallery-grid {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+}
+
+@media (min-width: 769px) {
+    .gallery-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.gallery-item {
+    display: block;
+    background: #000;
+    border: 1px solid var(--border);
+    transition: border-color 0.2s;
+}
+
+.gallery-item:hover,
+.gallery-item:focus-visible { border-color: var(--accent); }
+
+.gallery-item img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+/* ============================================================
    MOUVEMENTS RÉDUITS (WCAG 2.3.3) : ni zoom des plaques, ni animation de la modale
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
