@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { GameListItem } from '../../share/types/game';
 import { machineBadge } from '../../share/utils/machines';
+import { gameUrl } from '../../share/utils/slug';
 import { thumbnailPath } from '../../share/utils/thumbnail';
 import './Carousel.css';
 
@@ -377,7 +378,7 @@ export default function Carousel({ games, total, initialIndex = 0, topOffset = 0
                                 onClick={() => {
                                     // Fin d'un glissé au doigt : pas d'ouverture de la fiche
                                     if (touch.current.dragged) { touch.current.dragged = false; return; }
-                                    window.location.href = `/game/${game.id}`;
+                                    window.location.href = gameUrl(game);
                                 }}
                             >
                                 <CoverImage game={game} failed={failed} onFail={markFailed} />
