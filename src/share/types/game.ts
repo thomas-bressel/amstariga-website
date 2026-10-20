@@ -43,6 +43,8 @@ export interface GameListItem {
     machine_name?: string;
     /** Face avant vérifiée de la boîte (/uploads/…), absente si le jeu n'en a pas. */
     cover?: string;
+    /** Vignette du jeu (/uploads/…?v=…, date du fichier), absente s'il n'en a pas. */
+    thumbnail?: string;
 }
 
 export interface GameAuthor {
